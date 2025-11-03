@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useSession } from "@/lib/auth-client"
+import { useAuth } from "@/lib/auth-client"
 import {
   IconCamera,
   IconChartBar,
@@ -148,15 +148,15 @@ const staticData = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = useSession()
-  
-  const userData = session?.user ? {
-    name: session.user.name || "User",
-    email: session.user.email,
-    avatar: session.user.image || "/codeguide-logo.png",
+  const { user } = useAuth()
+
+  const userData = user ? {
+    name: user.name || "User",
+    email: user.email || "user@example.com",
+    avatar: "/codeguide-logo.png", // We don't have avatar from Supabase user
   } : {
     name: "Guest",
-    email: "guest@example.com", 
+    email: "guest@example.com",
     avatar: "/codeguide-logo.png",
   }
 

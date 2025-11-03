@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { signOut } from "@/lib/auth-client"
+import { useAuth } from "@/lib/auth-client"
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -43,6 +43,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
+  const { signOut } = useAuth()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   const handleSignOut = async () => {

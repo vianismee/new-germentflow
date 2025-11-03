@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { signUp } from "@/lib/auth-client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/lib/auth-client";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 const signUpSchema = z.object({
@@ -23,6 +24,9 @@ const signUpSchema = z.object({
         .min(8, "Password must be at least 8 characters")
         .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one uppercase letter, one lowercase letter, and one number"),
     confirmPassword: z.string(),
+    role: z.enum(["viewer", "quality-inspector", "production-manager"], {
+      message: "Please select a role",
+    }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -36,6 +40,7 @@ export default function SignUpPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const router = useRouter();
+    const { signUp } = useAuth();
 
     const form = useForm<SignUpForm>({
         resolver: zodResolver(signUpSchema),
@@ -44,6 +49,7 @@ export default function SignUpPage() {
             email: "",
             password: "",
             confirmPassword: "",
+            role: undefined,
         },
     });
 
@@ -52,11 +58,7 @@ export default function SignUpPage() {
         setError("");
 
         try {
-            const result = await signUp.email({
-                email: data.email,
-                password: data.password,
-                name: data.name,
-            });
+            const result = await signUp(data.email, data.password, data.name, data.role);
 
             if (result.error) {
                 setError(result.error.message || "Sign up failed");
@@ -120,6 +122,29 @@ export default function SignUpPage() {
                                                 disabled={isLoading}
                                             />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="role"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Role</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select your role" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="viewer">Viewer - Read only access</SelectItem>
+                                                <SelectItem value="quality-inspector">Quality Inspector - Manage quality control</SelectItem>
+                                                <SelectItem value="production-manager">Production Manager - Manage production</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}

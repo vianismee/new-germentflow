@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { signIn } from "@/lib/auth-client";
+import { useAuth } from "@/lib/auth-client";
 import { Loader2 } from "lucide-react";
 
 export default function SignInPage() {
@@ -17,6 +17,7 @@ export default function SignInPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const router = useRouter();
+    const { signIn } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,10 +25,7 @@ export default function SignInPage() {
         setError("");
 
         try {
-            const result = await signIn.email({
-                email,
-                password,
-            });
+            const result = await signIn(email, password);
 
             if (result.error) {
                 setError(result.error.message || "Sign in failed");

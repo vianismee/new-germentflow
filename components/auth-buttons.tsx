@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { LogIn, LogOut, User, UserPlus } from "lucide-react";
-import { useSession, signOut } from "@/lib/auth-client";
+import { useAuth } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function AuthButtons() {
-  const { data: session, isPending } = useSession();
+  const { user, loading, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -29,7 +29,7 @@ export function AuthButtons() {
     }
   };
 
-  if (isPending) {
+  if (loading) {
     return (
       <div className="flex items-center gap-2">
         <div className="h-8 w-16 animate-pulse rounded bg-muted" />
@@ -38,8 +38,7 @@ export function AuthButtons() {
     );
   }
 
-  if (session?.user) {
-    const user = session.user;
+  if (user) {
     const initials = user.name
       ? user.name
           .split(" ")
@@ -53,7 +52,6 @@ export function AuthButtons() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user.image || undefined} alt={user.name || "User"} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
@@ -67,6 +65,11 @@ export function AuthButtons() {
               {user.email && (
                 <p className="w-[200px] truncate text-sm text-muted-foreground">
                   {user.email}
+                </p>
+              )}
+              {user.role && (
+                <p className="w-[200px] truncate text-xs text-muted-foreground capitalize">
+                  Role: {user.role.replace('-', ' ')}
                 </p>
               )}
             </div>
@@ -111,9 +114,9 @@ export function AuthButtons() {
 
 // Simplified version for hero section
 export function HeroAuthButtons() {
-  const { data: session, isPending } = useSession();
+  const { user, loading } = useAuth();
 
-  if (isPending) {
+  if (loading) {
     return (
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <div className="h-12 w-32 animate-pulse rounded-lg bg-muted" />
@@ -122,7 +125,7 @@ export function HeroAuthButtons() {
     );
   }
 
-  if (session?.user) {
+  if (user) {
     return (
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Button asChild size="lg" className="text-base px-8 py-3">
