@@ -48,8 +48,8 @@ const staticData = {
       icon: IconUsers,
     },
     {
-      title: "Orders",
-      url: "#",
+      title: "Sales Orders",
+      url: "/sales-orders",
       icon: IconListDetails,
     },
     {
