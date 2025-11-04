@@ -5,7 +5,7 @@ import { Users } from 'lucide-react'
 
 export default function CustomersPage() {
   return (
-    <div className="flex-1 space-y-4 p-8">
+    <div className="flex-1 space-y-4 p-4 md:p-8">
       <div className="flex items-center space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">

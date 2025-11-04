@@ -15,15 +15,14 @@ import {
   Edit,
   ArrowLeft,
   Package,
-  DollarSign,
   Clock,
   CheckCircle,
   AlertCircle,
-  FileText,
-  TrendingUp
+  FileText
 } from 'lucide-react'
 import Link from 'next/link'
 import { getCustomerOrders, getCustomerOrderStats } from '@/lib/actions/customers'
+import { OrderHistory } from './order-history'
 import { useToast } from '@/hooks/use-toast'
 
 interface Customer {
@@ -57,7 +56,6 @@ interface SalesOrder {
 interface CustomerOrderStats {
   totalOrders: number
   completedOrders: number
-  totalValue: number
   lastOrderDate: string | Date | null
   lastOrderStatus: string | null
 }
@@ -149,14 +147,7 @@ export function CustomerDetailEnhanced({ customer }: CustomerDetailEnhancedProps
     })
   }
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(num)
-  }
-
+  
   const getOrderStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
@@ -328,18 +319,6 @@ export function CustomerDetailEnhanced({ customer }: CustomerDetailEnhancedProps
                       </div>
                     </div>
 
-                    <Separator />
-
-                    <div className="flex items-center space-x-3">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">Total Order Value</p>
-                        <p className="text-2xl font-bold">
-                          {formatCurrency(orderStats.totalValue)}
-                        </p>
-                      </div>
-                    </div>
-
                     {orderStats.lastOrderDate && (
                       <>
                         <Separator />
@@ -355,21 +334,6 @@ export function CustomerDetailEnhanced({ customer }: CustomerDetailEnhancedProps
                         </div>
                       </>
                     )}
-
-                    <Separator />
-
-                    <div className="flex items-center space-x-3">
-                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">Average Order Value</p>
-                        <p className="text-2xl font-bold">
-                          {orderStats.totalOrders > 0
-                            ? formatCurrency(orderStats.totalValue / orderStats.totalOrders)
-                            : formatCurrency(0)
-                          }
-                        </p>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -397,56 +361,8 @@ export function CustomerDetailEnhanced({ customer }: CustomerDetailEnhancedProps
           </div>
         </TabsContent>
 
-        <TabsContent value="orders" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Order History</CardTitle>
-              <CardDescription>
-                Complete order history for {customer.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No orders found</p>
-                  <Button asChild className="mt-4">
-                    <Link href={`/orders/new?customer=${customer.id}`}>
-                      Create First Order
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center space-x-4">
-                        {getOrderStatusIcon(order.status)}
-                        <div>
-                          <p className="font-medium">{order.orderNumber}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Ordered: {formatDate(order.orderDate)}
-                          </p>
-                          {order.targetDeliveryDate && (
-                            <p className="text-sm text-muted-foreground">
-                              Due: {formatDate(order.targetDeliveryDate)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(order.totalAmount)}</p>
-                        {getStatusBadge(order.status)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="orders">
+          <OrderHistory customerId={customer.id} customerName={customer.name} />
         </TabsContent>
       </Tabs>
     </div>

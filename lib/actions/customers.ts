@@ -270,13 +270,6 @@ export async function getCustomerOrderStats(customerId: string) {
         eq(salesOrders.status, 'completed')
       ))
 
-    const totalValue = await db
-      .select({
-        total: sql<number>`SUM(${salesOrders.totalAmount})`
-      })
-      .from(salesOrders)
-      .where(eq(salesOrders.customerId, customerId))
-
     const lastOrder = await db
       .select()
       .from(salesOrders)
@@ -289,7 +282,6 @@ export async function getCustomerOrderStats(customerId: string) {
       data: {
         totalOrders: totalOrders[0]?.count || 0,
         completedOrders: completedOrders[0]?.count || 0,
-        totalValue: totalValue[0]?.total || 0,
         lastOrderDate: lastOrder[0]?.orderDate || null,
         lastOrderStatus: lastOrder[0]?.status || null
       }
@@ -297,5 +289,140 @@ export async function getCustomerOrderStats(customerId: string) {
   } catch (error) {
     console.error('Error fetching customer order stats:', error)
     return { success: false, error: 'Failed to fetch customer order statistics' }
+  }
+}
+
+export async function getCustomerOrderWithDetails(customerId: string, orderId: string) {
+  try {
+    const { salesOrders, salesOrderItems, workOrders, productionStageHistory, qualityInspections } = await import('@/db/schema')
+
+    // Get order details
+    const order = await db
+      .select()
+      .from(salesOrders)
+      .where(and(
+        eq(salesOrders.id, orderId),
+        eq(salesOrders.customerId, customerId)
+      ))
+      .limit(1)
+
+    if (order.length === 0) {
+      return { success: false, error: 'Order not found' }
+    }
+
+    // Get order items
+    const items = await db
+      .select()
+      .from(salesOrderItems)
+      .where(eq(salesOrderItems.salesOrderId, orderId))
+
+    // Get work orders for each item
+    const workOrderData = await db
+      .select({
+        workOrder: workOrders,
+        stageHistory: productionStageHistory,
+        qualityInspection: qualityInspections
+      })
+      .from(workOrders)
+      .leftJoin(productionStageHistory, eq(workOrders.id, productionStageHistory.workOrderId))
+      .leftJoin(qualityInspections, eq(workOrders.id, qualityInspections.workOrderId))
+      .where(eq(workOrders.salesOrderId, orderId))
+
+    return {
+      success: true,
+      data: {
+        order: order[0],
+        items,
+        workOrders: workOrderData
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching order details:', error)
+    return { success: false, error: 'Failed to fetch order details' }
+  }
+}
+
+export async function getCustomerOrdersWithItems(customerId: string, limit = 20) {
+  try {
+    const { salesOrders, salesOrderItems } = await import('@/db/schema')
+
+    const orders = await db
+      .select()
+      .from(salesOrders)
+      .where(eq(salesOrders.customerId, customerId))
+      .orderBy(desc(salesOrders.orderDate))
+      .limit(limit)
+
+    // Get items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const items = await db
+          .select()
+          .from(salesOrderItems)
+          .where(eq(salesOrderItems.salesOrderId, order.id))
+
+        return {
+          ...order,
+          items
+        }
+      })
+    )
+
+    return {
+      success: true,
+      data: ordersWithItems
+    }
+  } catch (error) {
+    console.error('Error fetching customer orders with items:', error)
+    return { success: false, error: 'Failed to fetch customer orders with items' }
+  }
+}
+
+export async function searchCustomerOrders(customerId: string, query: string, status?: 'draft' | 'processing' | 'completed' | 'cancelled' | 'all') {
+  try {
+    const { salesOrders, salesOrderItems } = await import('@/db/schema')
+
+    const whereConditions = [eq(salesOrders.customerId, customerId)]
+
+    if (query.trim()) {
+      whereConditions.push(
+        sql`(${salesOrders.orderNumber} ILIKE ${`%${query}%`} OR
+              ${salesOrders.notes} ILIKE ${`%${query}%`})`
+      )
+    }
+
+    if (status && status !== 'all') {
+      whereConditions.push(eq(salesOrders.status, status as 'draft' | 'processing' | 'completed' | 'cancelled'))
+    }
+
+    const orders = await db
+      .select()
+      .from(salesOrders)
+      .where(and(...whereConditions))
+      .orderBy(desc(salesOrders.orderDate))
+      .limit(50)
+
+    // Get items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const items = await db
+          .select()
+          .from(salesOrderItems)
+          .where(eq(salesOrderItems.salesOrderId, order.id))
+
+        return {
+          ...order,
+          items
+        }
+      })
+    )
+
+    return {
+      success: true,
+      data: ordersWithItems
+    }
+  } catch (error) {
+    console.error('Error searching customer orders:', error)
+    return { success: false, error: 'Failed to search customer orders' }
   }
 }

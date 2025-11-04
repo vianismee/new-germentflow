@@ -17,7 +17,7 @@ export default async function CustomerPage({ params }: CustomerPageProps) {
   }
 
   return (
-    <div className="flex-1 space-y-4 p-8">
+    <div className="flex-1 space-y-4 p-4 md:p-8">
       <Suspense fallback={<div>Loading customer details...</div>}>
         <CustomerDetailEnhanced customer={result.data} />
       </Suspense>

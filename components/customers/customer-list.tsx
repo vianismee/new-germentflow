@@ -14,11 +14,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Search, MoreHorizontal, Edit, Trash2, Mail, Phone, Plus } from 'lucide-react'
+import { Search, MoreHorizontal, Edit, Trash2, Mail, Phone, Plus, Eye } from 'lucide-react'
 import { getCustomers, deleteCustomer, searchCustomers, getCustomerOrderCount } from '@/lib/actions/customers'
 import { useToast } from '@/hooks/use-toast'
 import { CustomerDialog, DeleteConfirmDialog } from '@/components/customers/customer-dialog'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Customer {
   id: string
@@ -34,6 +34,7 @@ interface Customer {
 }
 
 export function CustomerList() {
+  const router = useRouter()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -152,7 +153,15 @@ export function CustomerList() {
       header: 'Customer Name',
       cell: ({ row }: { row: any }) => (
         <div>
-          <div className="font-medium">{row.getValue('name')}</div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="link"
+              className="h-auto p-0 font-medium text-left"
+              onClick={() => router.push(`/customers/${row.original.id}`)}
+            >
+              {row.getValue('name')}
+            </Button>
+          </div>
           <div className="text-sm text-muted-foreground">{row.original.contactPerson}</div>
         </div>
       ),
@@ -196,6 +205,12 @@ export function CustomerList() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => router.push(`/customers/${row.original.id}`)}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 setSelectedCustomer(row.original)

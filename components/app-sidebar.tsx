@@ -39,11 +39,16 @@ const staticData = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
+      title: "Customers",
+      url: "/customers",
+      icon: IconUsers,
+    },
+    {
+      title: "Orders",
       url: "#",
       icon: IconListDetails,
     },
@@ -56,11 +61,6 @@ const staticData = {
       title: "Projects",
       url: "#",
       icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
     },
   ],
   navClouds: [
