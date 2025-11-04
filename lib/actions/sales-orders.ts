@@ -3,6 +3,8 @@
 import { eq, and, ilike, desc, asc, sql } from 'drizzle-orm'
 import { db } from '@/db'
 import { salesOrders, salesOrderItems, customers } from '@/db/schema/business'
+import { nanoid } from 'nanoid'
+import { revalidatePath } from 'next/cache'
 
 export interface CreateSalesOrderData {
   orderNumber: string
@@ -15,7 +17,6 @@ export interface CreateSalesOrderData {
     quantity: number
     size?: string
     color?: string
-    unitPrice: string
     specifications?: string
   }[]
 }
@@ -26,7 +27,7 @@ export interface UpdateSalesOrderData {
   orderDate?: string | Date
   targetDeliveryDate?: string | Date
   actualDeliveryDate?: string | Date | null
-  status?: 'draft' | 'processing' | 'completed' | 'cancelled'
+  status?: 'draft' | 'on_review' | 'approve' | 'cancelled'
   notes?: string
 }
 
@@ -38,34 +39,37 @@ export async function createSalesOrder(data: CreateSalesOrderData) {
       const [newOrder] = await tx
         .insert(salesOrders)
         .values({
+          id: nanoid(),
           orderNumber: data.orderNumber,
           customerId: data.customerId,
           orderDate: new Date(data.orderDate),
           targetDeliveryDate: new Date(data.targetDeliveryDate),
           notes: data.notes || null,
           status: 'draft',
-          totalAmount: data.items.reduce((sum, item) => {
-            return sum + (parseFloat(item.unitPrice) * item.quantity)
-          }, 0).toString(),
+          totalAmount: '0.00', // Set to 0 since we're not tracking prices
           createdBy: 'system', // TODO: Get from auth context
+          createdAt: new Date(),
+          updatedAt: new Date(),
         })
         .returning()
 
       // Create order items
       const orderItems = await Promise.all(
         data.items.map(async (item) => {
-          const totalPrice = (parseFloat(item.unitPrice) * item.quantity).toString()
           const [newItem] = await tx
             .insert(salesOrderItems)
             .values({
+              id: nanoid(),
               salesOrderId: newOrder.id,
               productName: item.productName,
               quantity: item.quantity,
               size: item.size || null,
               color: item.color || null,
-              unitPrice: item.unitPrice,
-              totalPrice,
+              unitPrice: '0.00', // Set to 0 since we're not tracking prices
+              totalPrice: '0.00', // Set to 0 since we're not tracking prices
               specifications: item.specifications || null,
+              createdAt: new Date(),
+              updatedAt: new Date(),
             })
             .returning()
           return newItem
@@ -78,6 +82,7 @@ export async function createSalesOrder(data: CreateSalesOrderData) {
       }
     })
 
+    revalidatePath('/sales-orders')
     return {
       success: true,
       data: result.order,
@@ -328,11 +333,13 @@ export async function getSalesOrderStats() {
       .from(salesOrders)
       .groupBy(salesOrders.status)
 
-    const totalValue = await db
+    // Get total items count instead of total value
+    const totalItems = await db
       .select({
-        total: sql<number>`SUM(${salesOrders.totalAmount})`,
+        total: sql<number>`SUM(${salesOrderItems.quantity})`,
       })
-      .from(salesOrders)
+      .from(salesOrderItems)
+      .leftJoin(salesOrders, eq(salesOrderItems.salesOrderId, salesOrders.id))
 
     const lastOrder = await db
       .select()
@@ -348,7 +355,7 @@ export async function getSalesOrderStats() {
           acc[item.status] = item.count
           return acc
         }, {} as Record<string, number>),
-        totalValue: totalValue[0]?.total || 0,
+        totalItems: totalItems[0]?.total || 0,
         lastOrderDate: lastOrder[0]?.createdAt || null,
       },
     }
@@ -357,6 +364,38 @@ export async function getSalesOrderStats() {
     return {
       success: false,
       error: 'Failed to fetch sales order statistics',
+    }
+  }
+}
+
+export async function updateOrderStatus(id: string, status: 'draft' | 'on_review' | 'approve' | 'cancelled') {
+  try {
+    const [updatedOrder] = await db
+      .update(salesOrders)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(eq(salesOrders.id, id))
+      .returning()
+
+    if (!updatedOrder) {
+      return {
+        success: false,
+        error: 'Sales order not found',
+      }
+    }
+
+    revalidatePath('/sales-orders')
+    return {
+      success: true,
+      data: updatedOrder,
+    }
+  } catch (error) {
+    console.error('Error updating order status:', error)
+    return {
+      success: false,
+      error: 'Failed to update order status',
     }
   }
 }

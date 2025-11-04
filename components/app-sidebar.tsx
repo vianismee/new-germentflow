@@ -18,6 +18,7 @@ import {
   IconReport,
   IconSearch,
   IconSettings,
+  IconTool,
   IconUsers,
 } from "@tabler/icons-react"
 
@@ -51,6 +52,11 @@ const staticData = {
       title: "Sales Orders",
       url: "/sales-orders",
       icon: IconListDetails,
+    },
+    {
+      title: "Work Orders",
+      url: "/work-orders",
+      icon: IconTool,
     },
     {
       title: "Analytics",

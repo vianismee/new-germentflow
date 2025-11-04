@@ -36,13 +36,13 @@ import {
   Save,
   ArrowLeft,
   ShoppingCart,
-  Package,
-  DollarSign
+  Package
 } from 'lucide-react'
 import { createSalesOrder, updateSalesOrder, generateOrderNumber, getSalesOrderById } from '@/lib/actions/sales-orders'
 import { getCustomers } from '@/lib/actions/customers'
 import { useToast } from '@/hooks/use-toast'
-import { format } from 'date-fns'
+import { DatePicker } from '@/components/ui/date-picker'
+import { ColorPicker } from '@/components/ui/color-picker'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -54,8 +54,6 @@ interface OrderItem {
   size?: string | null
   color?: string | null
   designFileUrl?: string | null
-  unitPrice: string
-  totalPrice: string
   specifications?: string | null
   createdAt: string | Date
   updatedAt: string | Date
@@ -84,10 +82,10 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
   // Form state
   const [orderNumber, setOrderNumber] = useState('')
   const [customerId, setCustomerId] = useState('')
-  const [orderDate, setOrderDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [targetDeliveryDate, setTargetDeliveryDate] = useState('')
+  const [orderDate, setOrderDate] = useState<Date>(new Date())
+  const [targetDeliveryDate, setTargetDeliveryDate] = useState<Date | undefined>()
   const [notes, setNotes] = useState('')
-  const [status, setStatus] = useState<'draft' | 'processing' | 'completed' | 'cancelled'>('draft')
+  const [status, setStatus] = useState<'draft' | 'on_review' | 'approve' | 'cancelled'>('draft')
 
   // Order items
   const [orderItems, setOrderItems] = useState<OrderItem[]>([])
@@ -98,14 +96,10 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
     quantity: 1,
     size: '',
     color: '',
-    unitPrice: '',
     specifications: ''
   })
 
-  // Customer search
-  const [customerSearch, setCustomerSearch] = useState('')
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([])
-
+  
   useEffect(() => {
     const initialize = async () => {
       await fetchCustomers()
@@ -121,24 +115,11 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
     initialize()
   }, [orderId, isEdit])
 
-  useEffect(() => {
-    if (customerSearch.trim()) {
-      const filtered = customers.filter(customer =>
-        customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        customer.contactPerson.toLowerCase().includes(customerSearch.toLowerCase())
-      )
-      setFilteredCustomers(filtered)
-    } else {
-      setFilteredCustomers(customers)
-    }
-  }, [customerSearch, customers])
-
   const fetchCustomers = async () => {
     try {
       const result = await getCustomers()
       if (result.success && result.data) {
         setCustomers(result.data)
-        setFilteredCustomers(result.data)
       }
     } catch (error) {
       toast({
@@ -160,15 +141,13 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
         const order = result.data
         setOrderNumber(order.orderNumber)
         setCustomerId(order.customerId)
-        setOrderDate(format(new Date(order.orderDate), 'yyyy-MM-dd'))
-        setTargetDeliveryDate(format(new Date(order.targetDeliveryDate), 'yyyy-MM-dd'))
+        setOrderDate(new Date(order.orderDate))
+        setTargetDeliveryDate(new Date(order.targetDeliveryDate))
         setNotes(order.notes || '')
         setStatus(order.status)
         setOrderItems(order.items.map((item: any) => ({
           ...item,
-          id: item.id,
-          totalPrice: item.totalPrice,
-          unitPrice: item.unitPrice
+          id: item.id
         })))
       }
     } catch (error) {
@@ -182,7 +161,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
 
   
   const addOrderItem = () => {
-    if (!newItem.productName || !newItem.unitPrice || newItem.quantity <= 0) {
+    if (!newItem.productName || newItem.quantity <= 0) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields for the order item',
@@ -191,7 +170,6 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
       return
     }
 
-    const totalPrice = (parseFloat(newItem.unitPrice) * newItem.quantity).toString()
     const orderItem: OrderItem = {
       id: Date.now().toString(),
       salesOrderId: 'temp', // Will be set when order is created
@@ -200,8 +178,6 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
       size: newItem.size || null,
       color: newItem.color || null,
       designFileUrl: null,
-      unitPrice: newItem.unitPrice,
-      totalPrice,
       specifications: newItem.specifications || null,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -215,7 +191,6 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
       quantity: 1,
       size: '',
       color: '',
-      unitPrice: '',
       specifications: ''
     })
   }
@@ -224,8 +199,8 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
     setOrderItems(orderItems.filter(item => item.id !== itemId))
   }
 
-  const calculateTotal = () => {
-    return orderItems.reduce((total, item) => total + parseFloat(item.totalPrice || '0'), 0)
+  const calculateTotalItems = () => {
+    return orderItems.reduce((total, item) => total + item.quantity, 0)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -254,7 +229,6 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
           quantity: item.quantity,
           size: item.size || undefined,
           color: item.color || undefined,
-          unitPrice: item.unitPrice,
           specifications: item.specifications || undefined
         }))
       }
@@ -290,14 +264,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
     }
   }
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(num)
-  }
-
+  
   const selectedCustomer = customers.find(c => c.id === customerId)
 
   return (
@@ -333,7 +300,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="orderNumber">Order Number</Label>
                 <Input
                   id="orderNumber"
@@ -344,7 +311,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                 />
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={status} onValueChange={(value: any) => setStatus(value)}>
                   <SelectTrigger>
@@ -352,34 +319,32 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="on_review">On Review</SelectItem>
+                    <SelectItem value="approve">Approved</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="orderDate">Order Date</Label>
-                <Input
-                  id="orderDate"
-                  type="date"
+                <DatePicker
                   value={orderDate}
-                  onChange={(e) => setOrderDate(e.target.value)}
+                  onChange={(date) => date && setOrderDate(date)}
+                  placeholder="Select order date"
                 />
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="targetDeliveryDate">Target Delivery Date</Label>
-                <Input
-                  id="targetDeliveryDate"
-                  type="date"
+                <DatePicker
                   value={targetDeliveryDate}
-                  onChange={(e) => setTargetDeliveryDate(e.target.value)}
+                  onChange={setTargetDeliveryDate}
+                  placeholder="Select target delivery date"
                 />
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
@@ -401,24 +366,15 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="customerSearch">Search Customer</Label>
-                <Input
-                  id="customerSearch"
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                  placeholder="Search by name or contact person..."
-                />
-              </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="customer">Customer</Label>
                 <Select value={customerId} onValueChange={setCustomerId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredCustomers.map((customer) => (
+                    {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         <div>
                           <div className="font-medium">{customer.name}</div>
@@ -460,7 +416,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
             <div className="border rounded-lg p-4 space-y-4">
               <h4 className="font-semibold">Add New Item</h4>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="productName">Product Name *</Label>
                   <Input
                     id="productName"
@@ -470,7 +426,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                   />
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="quantity">Quantity *</Label>
                   <Input
                     id="quantity"
@@ -481,20 +437,7 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="unitPrice">Unit Price *</Label>
-                  <Input
-                    id="unitPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={newItem.unitPrice}
-                    onChange={(e) => setNewItem({...newItem, unitPrice: e.target.value})}
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="size">Size</Label>
                   <Input
                     id="size"
@@ -504,18 +447,17 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                   />
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="color">Color</Label>
-                  <Input
-                    id="color"
+                  <ColorPicker
                     value={newItem.color}
-                    onChange={(e) => setNewItem({...newItem, color: e.target.value})}
-                    placeholder="e.g., Red, Blue"
+                    onChange={(color) => setNewItem({...newItem, color})}
+                    placeholder="Select a color"
                   />
                 </div>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="specifications">Specifications</Label>
                 <Textarea
                   id="specifications"
@@ -546,8 +488,6 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                           <TableHead>Quantity</TableHead>
                           <TableHead>Size</TableHead>
                           <TableHead>Color</TableHead>
-                          <TableHead>Unit Price</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
                           <TableHead className="w-[50px]"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -566,11 +506,19 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                             </TableCell>
                             <TableCell>{item.quantity}</TableCell>
                             <TableCell>{item.size || '-'}</TableCell>
-                            <TableCell>{item.color || '-'}</TableCell>
-                            <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(item.totalPrice)}
-                            </TableCell>
+                            <TableCell>
+                          {item.color ? (
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-4 h-4 rounded border border-gray-300"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span className="text-xs font-mono">{item.color}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                             <TableCell>
                               <Button
                                 type="button"
@@ -585,13 +533,12 @@ export function SalesOrderForm({ orderId, isEdit = false }: SalesOrderFormProps)
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell colSpan={5} className="font-semibold">
-                            Total Order Value
+                          <TableCell colSpan={4} className="font-semibold">
+                            Total Items
                           </TableCell>
-                          <TableCell className="text-right font-bold text-lg">
-                            {formatCurrency(calculateTotal())}
+                          <TableCell className="font-bold text-lg">
+                            {calculateTotalItems()}
                           </TableCell>
-                          <TableCell></TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>

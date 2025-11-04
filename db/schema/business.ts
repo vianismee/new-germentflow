@@ -12,7 +12,7 @@ import {
 
 // Enums
 export const customerStatusEnum = pgEnum("customer_status", ["active", "inactive", "prospect"]);
-export const orderStatusEnum = pgEnum("order_status", ["draft", "processing", "completed", "cancelled"]);
+export const orderStatusEnum = pgEnum("order_status", ["draft", "on_review", "approve", "cancelled"]);
 export const productionStageEnum = pgEnum("production_stage", [
   "order_processing",
   "material_procurement",

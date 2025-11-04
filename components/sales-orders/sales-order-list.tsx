@@ -22,6 +22,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Search,
   MoreHorizontal,
   Eye,
@@ -41,18 +49,18 @@ import { getSalesOrders, deleteSalesOrder, searchSalesOrders } from '@/lib/actio
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { StatusEditor } from './status-editor'
 
 interface SalesOrder {
   id: string
   orderNumber: string
   customerId: string
-  customerName: string
-  customerContactPerson: string
+  customerName: string | null
+  customerContactPerson: string | null
   orderDate: string | Date
   targetDeliveryDate: string | Date
   actualDeliveryDate?: string | Date | null
-  status: 'draft' | 'processing' | 'completed' | 'cancelled'
-  totalAmount: string
+  status: 'draft' | 'on_review' | 'approve' | 'cancelled'
   notes?: string | null
   createdAt: string | Date
   updatedAt: string | Date
@@ -165,6 +173,14 @@ export function SalesOrderList() {
     }
   }
 
+  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    setOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.id === orderId ? { ...order, status: newStatus as any } : order
+      )
+    )
+  }
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       draft: {
@@ -172,13 +188,13 @@ export function SalesOrderList() {
         className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         icon: FileText
       },
-      processing: {
-        label: 'Processing',
+      on_review: {
+        label: 'On Review',
         className: 'bg-blue-100 text-blue-800 border-blue-200',
         icon: Clock
       },
-      completed: {
-        label: 'Completed',
+      approve: {
+        label: 'Approved',
         className: 'bg-green-100 text-green-800 border-green-200',
         icon: CheckCircle
       },
@@ -200,14 +216,7 @@ export function SalesOrderList() {
     )
   }
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(num)
-  }
-
+  
   const formatDate = (date: string | Date) => {
     return format(new Date(date), 'MMM dd, yyyy')
   }
@@ -276,11 +285,11 @@ export function SalesOrderList() {
                 <DropdownMenuItem onClick={() => setStatusFilter('draft')}>
                   Draft
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('processing')}>
-                  Processing
+                <DropdownMenuItem onClick={() => setStatusFilter('on_review')}>
+                  On Review
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('completed')}>
-                  Completed
+                <DropdownMenuItem onClick={() => setStatusFilter('approve')}>
+                  Approved
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('cancelled')}>
                   Cancelled
@@ -322,7 +331,6 @@ export function SalesOrderList() {
                     <TableHead>Delivery Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Items</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
                     <TableHead className="w-[70px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -356,15 +364,18 @@ export function SalesOrderList() {
                           {formatDate(order.targetDeliveryDate)}
                         </div>
                       </TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
+                      <TableCell>
+                        <StatusEditor
+                          orderId={order.id}
+                          currentStatus={order.status}
+                          onStatusChange={(newStatus) => handleStatusUpdate(order.id, newStatus)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Package className="h-3 w-3 text-muted-foreground" />
                           {order.itemCount}
                         </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(order.totalAmount)}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -410,30 +421,30 @@ export function SalesOrderList() {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      {deleteDialogOpen && orderToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
-            <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete sales order "{orderToDelete.orderNumber}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirmDelete}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete sales order "{orderToDelete?.orderNumber}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

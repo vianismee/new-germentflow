@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 interface OrderStats {
   totalOrders: number
   statusCounts: Record<string, number>
-  totalValue: number
+  totalItems: number
   lastOrderDate: string | Date | null
 }
 
@@ -74,13 +74,7 @@ export function SalesOrderStats() {
     return null
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount)
-  }
-
+  
   const formatDate = (date: string | Date | null) => {
     if (!date) return 'Never'
     return new Date(date).toLocaleDateString('en-US', {
@@ -107,14 +101,14 @@ export function SalesOrderStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Processing</CardTitle>
+          <CardTitle className="text-sm font-medium">On Review</CardTitle>
           <Clock className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.statusCounts.processing || 0}</div>
+          <div className="text-2xl font-bold">{stats.statusCounts.on_review || 0}</div>
           <p className="text-xs text-muted-foreground">
             {stats.totalOrders > 0
-              ? `${Math.round(((stats.statusCounts.processing || 0) / stats.totalOrders) * 100)}% of total`
+              ? `${Math.round(((stats.statusCounts.on_review || 0) / stats.totalOrders) * 100)}% of total`
               : 'No orders yet'
             }
           </p>
@@ -123,14 +117,14 @@ export function SalesOrderStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Completed</CardTitle>
+          <CardTitle className="text-sm font-medium">Approved</CardTitle>
           <CheckCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.statusCounts.completed || 0}</div>
+          <div className="text-2xl font-bold">{stats.statusCounts.approve || 0}</div>
           <p className="text-xs text-muted-foreground">
             {stats.totalOrders > 0
-              ? `${Math.round(((stats.statusCounts.completed || 0) / stats.totalOrders) * 100)}% completed`
+              ? `${Math.round(((stats.statusCounts.approve || 0) / stats.totalOrders) * 100)}% approved`
               : 'No orders yet'
             }
           </p>
@@ -139,11 +133,11 @@ export function SalesOrderStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Items</CardTitle>
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(stats.totalValue)}</div>
+          <div className="text-2xl font-bold">{stats.totalItems}</div>
           <p className="text-xs text-muted-foreground">
             Across all orders
           </p>

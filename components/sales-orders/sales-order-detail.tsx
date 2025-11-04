@@ -25,9 +25,7 @@ import {
   FileText,
   User,
   Mail,
-  Phone,
-  Download,
-  Share
+  Phone
 } from 'lucide-react'
 import { deleteSalesOrder } from '@/lib/actions/sales-orders'
 import { useToast } from '@/hooks/use-toast'
@@ -42,8 +40,6 @@ interface OrderItem {
   size?: string | null
   color?: string | null
   designFileUrl?: string | null
-  unitPrice: string
-  totalPrice: string
   specifications?: string | null
   createdAt: string | Date
   updatedAt: string | Date
@@ -60,8 +56,7 @@ interface SalesOrder {
   orderDate: string | Date
   targetDeliveryDate: string | Date
   actualDeliveryDate?: string | Date | null
-  status: 'draft' | 'processing' | 'completed' | 'cancelled'
-  totalAmount: string
+  status: 'draft' | 'on_review' | 'approve' | 'cancelled'
   notes?: string | null
   createdBy: string
   createdAt: string | Date
@@ -114,13 +109,13 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
         className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         icon: FileText
       },
-      processing: {
-        label: 'Processing',
+      on_review: {
+        label: 'On Review',
         className: 'bg-blue-100 text-blue-800 border-blue-200',
         icon: Clock
       },
-      completed: {
-        label: 'Completed',
+      approve: {
+        label: 'Approved',
         className: 'bg-green-100 text-green-800 border-green-200',
         icon: CheckCircle
       },
@@ -142,14 +137,7 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
     )
   }
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(num)
-  }
-
+  
   const formatDate = (date: string | Date) => {
     return format(new Date(date), 'MMM dd, yyyy')
   }
@@ -159,7 +147,7 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
   }
 
   const isOverdue = () => {
-    if (order.status === 'completed' || order.status === 'cancelled') return false
+    if (order.status === 'approve' || order.status === 'cancelled') return false
     return new Date(order.targetDeliveryDate) < new Date()
   }
 
@@ -191,14 +179,6 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm">
-            <Share className="mr-2 h-4 w-4" />
-            Share
-          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/sales-orders/${order.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
@@ -311,8 +291,6 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
                       <TableHead>Quantity</TableHead>
                       <TableHead>Size</TableHead>
                       <TableHead>Color</TableHead>
-                      <TableHead>Unit Price</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -341,18 +319,14 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
                             </div>
                           ) : '-'}
                         </TableCell>
-                        <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.totalPrice)}
-                        </TableCell>
                       </TableRow>
                     ))}
                     <TableRow>
-                      <TableCell colSpan={5} className="font-semibold">
-                        Total Order Value
+                      <TableCell colSpan={3} className="font-semibold">
+                        Total Items
                       </TableCell>
-                      <TableCell className="text-right font-bold text-lg">
-                        {formatCurrency(order.totalAmount)}
+                      <TableCell className="font-bold text-lg">
+                        {order.items.reduce((sum, item) => sum + item.quantity, 0)}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -375,8 +349,8 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
                 <span className="font-medium">{order.items.length}</span>
               </div>
               <div className="flex justify-between">
-                <span>Total Value:</span>
-                <span className="font-medium">{formatCurrency(order.totalAmount)}</span>
+                <span>Total Quantity:</span>
+                <span className="font-medium">{order.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Status:</span>
@@ -385,37 +359,7 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <Link href={`/sales-orders/${order.id}/edit`}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Order
-                </Link>
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Download Invoice
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Share className="mr-2 h-4 w-4" />
-                Share Order
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-destructive hover:text-destructive"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Order
-              </Button>
-            </CardContent>
-          </Card>
-
+  
           {/* Timeline */}
           <Card>
             <CardHeader>
@@ -431,7 +375,7 @@ export function SalesOrderDetail({ order }: SalesOrderDetailProps) {
                   </p>
                 </div>
               </div>
-              {order.actualDeliveryDate && order.status === 'completed' && (
+              {order.actualDeliveryDate && order.status === 'approve' && (
                 <div className="flex items-center space-x-3">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <div>

@@ -15,6 +15,13 @@
       "when": 1762177311920,
       "tag": "0001_yielding_silver_samurai",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762262955760,
+      "tag": "0002_sloppy_gravity",
+      "breakpoints": true
     }
   ]
 }
