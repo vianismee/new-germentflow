@@ -1,0 +1,19 @@
+| Nomor WO    | Dari SO     | Tahap Produksi Saat Ini | Mulai Produksi | Lolos QC | Reparasi | Ditolak | Nomor Surat Jalan | Tgl Kirim | Status Pengiriman |
+| ----------- | ----------- | ----------------------- | -------------- | -------- | -------- | ------- | ----------------- | --------- | ----------------- |
+| WO-2025-005 | SO-2025-005 | Delivered               | 2025-10-23     | 44       | 0        | 0       | null              | null      | null              |
+| WO-2025-007 | SO-2025-007 | PPIC                    | 2025-10-23     | 3900     | 100      | 0       | null              | null      | null              |
+| WO-2025-008 | SO-2025-008 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-009 | SO-2025-015 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-010 | SO-2025-014 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-011 | SO-2025-013 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-012 | SO-2025-012 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-013 | SO-2025-011 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-014 | SO-2025-010 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-015 | SO-2025-009 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-016 | SO-2025-016 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-017 | SO-2025-017 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-018 | SO-2025-020 | PPIC                    | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-019 | SO-2025-019 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-020 | SO-2025-017 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-021 | SO-2025-018 | Delivered               | 2025-10-24     | null     | null     | null    | null              | null      | null              |
+| WO-2025-022 | SO-2025-021 | Cutting                 | 2025-10-24     | 100      | 0        | 0       | null              | null      | null              |

@@ -109,6 +109,10 @@ export const qualityInspections = pgTable("quality_inspections", {
   status: qualityStatusEnum("status").default("pending").notNull(),
   inspectedBy: text("inspected_by").notNull(),
   inspectionDate: timestamp("inspection_date").defaultNow().notNull(),
+  totalQuantity: integer("total_quantity").notNull().default(0),
+  passedQuantity: integer("passed_quantity").notNull().default(0),
+  repairedQuantity: integer("repaired_quantity").notNull().default(0),
+  rejectedQuantity: integer("rejected_quantity").notNull().default(0),
   issues: text("issues"), // JSON string for identified issues
   repairNotes: text("repair_notes"),
   reinspectionDate: timestamp("reinspection_date"),

@@ -34,6 +34,10 @@ interface QualityInspection {
   status: "pending" | "pass" | "repair" | "reject"
   inspectedBy?: string
   inspectionDate: Date
+  totalQuantity: number
+  passedQuantity: number
+  repairedQuantity: number
+  rejectedQuantity: number
   issues?: any
   repairNotes?: string
   reinspectionDate?: Date | null
@@ -53,38 +57,58 @@ export function QualityInspectionDetail({ inspection: initialInspection }: Quali
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, passed?: number, repaired?: number, rejected?: number, total?: number) => {
+    // Create a more descriptive status based on the quantities
+    if (passed === total) {
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          All Passed
+        </Badge>
+      )
+    }
+
+    if (rejected === total) {
+      return (
+        <Badge className="bg-red-100 text-red-800 border-red-200 flex items-center gap-1">
+          <XCircle className="h-3 w-3" />
+          All Rejected
+        </Badge>
+      )
+    }
+
+    if (repaired === total) {
+      return (
+        <Badge className="bg-orange-100 text-orange-800 border-orange-200 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          All Repaired
+        </Badge>
+      )
+    }
+
+    // Mixed result - show detailed breakdown
     const statusConfig = {
-      pending: {
-        label: "Pending",
-        className: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        icon: Clock
-      },
-      pass: {
-        label: "Pass",
-        className: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle
-      },
-      repair: {
-        label: "Repair Required",
-        className: "bg-orange-100 text-orange-800 border-orange-200",
-        icon: AlertCircle
-      },
-      reject: {
-        label: "Rejected",
-        className: "bg-red-100 text-red-800 border-red-200",
-        icon: XCircle
-      }
+      pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
+      pass: { label: "Mostly Passed", className: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
+      repair: { label: "Mixed Result", className: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: AlertCircle },
+      reject: { label: "Issues Found", className: "bg-red-100 text-red-800 border-red-200", icon: XCircle }
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
     const Icon = config.icon
 
     return (
-      <Badge className={`${config.className} flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
+      <div className="flex items-center gap-1">
+        <Badge className={`${config.className} flex items-center gap-1`}>
+          <Icon className="h-3 w-3" />
+          {config.label}
+        </Badge>
+        {total && passed !== undefined && (
+          <Badge variant="outline" className="text-xs">
+            {passed}/{total}
+          </Badge>
+        )}
+      </div>
     )
   }
 
@@ -129,7 +153,7 @@ export function QualityInspectionDetail({ inspection: initialInspection }: Quali
     }
   }
 
-  const parsedIssues = inspection.issues ? JSON.parse(inspection.issues) : []
+  const parsedIssues = inspection.issues || []
 
   return (
     <div className="space-y-6 mt-4">
@@ -145,7 +169,13 @@ export function QualityInspectionDetail({ inspection: initialInspection }: Quali
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               {inspection.workOrderNumber}
-              {getStatusBadge(inspection.status)}
+              {getStatusBadge(
+                          inspection.status,
+                          inspection.passedQuantity,
+                          inspection.repairedQuantity,
+                          inspection.rejectedQuantity,
+                          inspection.totalQuantity
+                        )}
               {getStageBadge(inspection.stage)}
             </h1>
             <p className="text-muted-foreground">
@@ -242,11 +272,57 @@ export function QualityInspectionDetail({ inspection: initialInspection }: Quali
                     </div>
                     <div>
                       <span className="font-medium">Status:</span>{' '}
-                      {getStatusBadge(inspection.status)}
+                      {getStatusBadge(
+                          inspection.status,
+                          inspection.passedQuantity,
+                          inspection.repairedQuantity,
+                          inspection.rejectedQuantity,
+                          inspection.totalQuantity
+                        )}
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Quantity Breakdown */}
+              {inspection.totalQuantity && (
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Quantity Breakdown
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                      <CheckCircle className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-green-700">
+                        {inspection.passedQuantity || 0}
+                      </div>
+                      <div className="text-xs text-green-600">Passed</div>
+                    </div>
+                    <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      <AlertCircle className="h-5 w-5 text-orange-600 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-orange-700">
+                        {inspection.repairedQuantity || 0}
+                      </div>
+                      <div className="text-xs text-orange-600">Repaired</div>
+                    </div>
+                    <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+                      <XCircle className="h-5 w-5 text-red-600 mx-auto mb-1" />
+                      <div className="text-lg font-bold text-red-700">
+                        {inspection.rejectedQuantity || 0}
+                      </div>
+                      <div className="text-xs text-red-600">Rejected</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center">
+                    <span className="text-sm text-muted-foreground">Total: </span>
+                    <span className="text-sm font-medium">
+                      {(inspection.passedQuantity || 0) + (inspection.repairedQuantity || 0) + (inspection.rejectedQuantity || 0)} / {inspection.totalQuantity}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-1">units</span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -266,6 +342,15 @@ export function QualityInspectionDetail({ inspection: initialInspection }: Quali
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium">Issue #{index + 1}</h4>
+                          <Badge
+                            className={
+                              issue.category === "repair"
+                                ? "bg-orange-100 text-orange-800 border-orange-200"
+                                : "bg-red-100 text-red-800 border-red-200"
+                            }
+                          >
+                            {issue.category?.toUpperCase()}
+                          </Badge>
                           <Badge
                             className={
                               issue.severity === "minor"
@@ -398,7 +483,13 @@ export function QualityInspectionDetail({ inspection: initialInspection }: Quali
                 <Separator />
                 <div className="flex justify-between">
                   <span className="text-sm font-medium">Result</span>
-                  {getStatusBadge(inspection.status)}
+                  {getStatusBadge(
+                          inspection.status,
+                          inspection.passedQuantity,
+                          inspection.repairedQuantity,
+                          inspection.rejectedQuantity,
+                          inspection.totalQuantity
+                        )}
                 </div>
               </div>
             </CardContent>

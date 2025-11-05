@@ -1,12 +1,13 @@
 import { Metadata } from 'next'
+import Link from 'next/link'
 import { Suspense } from 'react'
-import { QualityControlDashboard } from '@/components/quality-control/quality-control-dashboard'
+import { Button } from '@/components/ui/button'
 import { QualityControlList } from '@/components/quality-control/quality-control-list'
-import { QualityControlStats } from '@/components/quality-control/quality-control-stats'
+import { Plus } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Quality Control | GarmentFlow',
-  description: 'Manage quality control inspections, track defects, and ensure product standards',
+  description: 'Manage quality control inspections and maintain product standards.',
 }
 
 export default function QualityControlPage() {
@@ -16,27 +17,14 @@ export default function QualityControlPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Quality Control</h2>
           <p className="text-muted-foreground">
-            Manage quality inspections, track issues, and maintain product standards.
+            Manage quality inspections and maintain product standards.
           </p>
         </div>
       </div>
 
-      <Suspense fallback={<div>Loading stats...</div>}>
-        <QualityControlStats />
+      <Suspense fallback={<div>Loading inspections...</div>}>
+        <QualityControlList />
       </Suspense>
-
-      <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Suspense fallback={<div>Loading inspections...</div>}>
-            <QualityControlList />
-          </Suspense>
-        </div>
-        <div>
-          <Suspense fallback={<div>Loading dashboard...</div>}>
-            <QualityControlDashboard />
-          </Suspense>
-        </div>
-      </div>
     </div>
   )
 }

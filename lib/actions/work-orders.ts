@@ -138,8 +138,7 @@ export async function createWorkOrderFromSalesOrderItem(
 // Get all work orders
 export async function getWorkOrders() {
   try {
-    console.log('=== Getting Work Orders with JOIN ===')
-
+    
     // Use a simpler approach - first get basic work order data, then enhance it
     const basicWorkOrders = await db
       .select({

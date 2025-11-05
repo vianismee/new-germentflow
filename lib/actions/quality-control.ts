@@ -20,7 +20,11 @@ export type QualityInspection = {
   status: "pending" | "pass" | "repair" | "reject"
   inspectedBy: string
   inspectionDate: Date
-  issues?: any
+  totalQuantity: number
+  passedQuantity: number
+  repairedQuantity: number
+  rejectedQuantity: number
+  issues?: QualityIssue[]
   repairNotes?: string
   reinspectionDate?: Date | null
   finalStatus?: "pending" | "pass" | "repair" | "reject"
@@ -35,6 +39,10 @@ export type QualityInspection = {
 
 export type QualityMetrics = {
   totalInspections: number
+  totalUnitsInspected: number
+  totalUnitsPassed: number
+  totalUnitsRepaired: number
+  totalUnitsRejected: number
   passedInspections: number
   repairedInspections: number
   rejectedInspections: number
@@ -42,27 +50,37 @@ export type QualityMetrics = {
   passRate: number
   repairRate: number
   rejectRate: number
+  unitPassRate: number
+  unitRepairRate: number
+  unitRejectRate: number
   averageInspectionTime: number
   inspectionsByStage: Record<string, number>
   inspectionsByInspector: Record<string, number>
 }
 
 export type QualityIssue = {
+  id: string
   type: string
   description: string
   severity: "minor" | "major" | "critical"
   position?: string
   quantity?: number
+  category: "repair" | "reject"
 }
 
 export type InspectionFormData = {
   workOrderId: string
   stage: string
   status: "pass" | "repair" | "reject"
-  issues?: QualityIssue[]
+  totalQuantity: number
+  passedQuantity: number
+  repairedQuantity: number
+  rejectedQuantity: number
+  issues: QualityIssue[]
   repairNotes?: string
   reinspectionRequired?: boolean
   reinspectionDate?: Date
+  inspectorNotes?: string
 }
 
 // Get quality inspections with filtering and pagination
@@ -134,6 +152,10 @@ export async function getQualityInspections(params: {
         status: qualityInspections.status,
         inspectedBy: qualityInspections.inspectedBy,
         inspectionDate: qualityInspections.inspectionDate,
+        totalQuantity: qualityInspections.totalQuantity,
+        passedQuantity: qualityInspections.passedQuantity,
+        repairedQuantity: qualityInspections.repairedQuantity,
+        rejectedQuantity: qualityInspections.rejectedQuantity,
         issues: qualityInspections.issues,
         repairNotes: qualityInspections.repairNotes,
         reinspectionDate: qualityInspections.reinspectionDate,
@@ -162,9 +184,15 @@ export async function getQualityInspections(params: {
 
     const total = totalResult[0]?.count || 0
 
+    // Parse issues JSON if present
+    const processedData = data.map(item => ({
+      ...item,
+      issues: item.issues ? JSON.parse(item.issues) : undefined
+    }))
+
     return {
       success: true,
-      data: data as QualityInspection[],
+      data: processedData as QualityInspection[],
       pagination: {
         page,
         limit,
@@ -192,6 +220,10 @@ export async function getQualityInspectionById(id: string) {
         status: qualityInspections.status,
         inspectedBy: qualityInspections.inspectedBy,
         inspectionDate: qualityInspections.inspectionDate,
+        totalQuantity: qualityInspections.totalQuantity,
+        passedQuantity: qualityInspections.passedQuantity,
+        repairedQuantity: qualityInspections.repairedQuantity,
+        rejectedQuantity: qualityInspections.rejectedQuantity,
         issues: qualityInspections.issues,
         repairNotes: qualityInspections.repairNotes,
         reinspectionDate: qualityInspections.reinspectionDate,
@@ -220,9 +252,15 @@ export async function getQualityInspectionById(id: string) {
       }
     }
 
+    // Parse issues JSON if present
+    const processedInspection = {
+      ...inspection,
+      issues: inspection.issues ? JSON.parse(inspection.issues) : undefined
+    }
+
     return {
       success: true,
-      data: inspection as QualityInspection
+      data: processedInspection as QualityInspection
     }
   } catch (error) {
     console.error("Failed to fetch quality inspection:", error)
@@ -246,7 +284,11 @@ export async function createQualityInspection(data: InspectionFormData, inspecto
       status: data.status as any,
       inspectedBy: inspectorId,
       inspectionDate: now,
-      issues: data.issues ? JSON.stringify(data.issues) : null,
+      totalQuantity: data.totalQuantity,
+      passedQuantity: data.passedQuantity,
+      repairedQuantity: data.repairedQuantity,
+      rejectedQuantity: data.rejectedQuantity,
+      issues: data.issues && data.issues.length > 0 ? JSON.stringify(data.issues) : null,
       repairNotes: data.repairNotes || null,
       reinspectionDate: data.reinspectionRequired ? data.reinspectionDate : null,
       finalStatus: data.status === "pass" ? "pass" : data.status as any,
@@ -256,37 +298,44 @@ export async function createQualityInspection(data: InspectionFormData, inspecto
 
     await db.insert(qualityInspections).values(inspectionData)
 
-    // Update work order stage if quality control is passed
-    if (data.status === "pass" && data.stage === "quality_control") {
-      await db
-        .update(workOrders)
-        .set({
-          currentStage: "finishing",
-          updatedAt: now
+    // Update work order stage if all units pass quality control or if any units need to proceed
+    if (data.stage === "quality_control") {
+      // Determine if we should advance to finishing based on inspection results
+      const hasPassedUnits = data.passedQuantity > 0
+      const hasIssues = data.repairedQuantity > 0 || data.rejectedQuantity > 0
+
+      // Advance to finishing if there are passed units or if it's a mixed result
+      if (hasPassedUnits || (data.repairedQuantity > 0 && data.rejectedQuantity === 0)) {
+        await db
+          .update(workOrders)
+          .set({
+            currentStage: "finishing",
+            updatedAt: now
+          })
+          .where(eq(workOrders.id, data.workOrderId))
+
+        // Add to production stage history
+        await db.insert(productionStageHistory).values({
+          id: nanoid(),
+          workOrderId: data.workOrderId,
+          stage: "quality_control",
+          startedAt: now,
+          completedAt: now,
+          duration: 0, // Quality control inspection time
+          notes: `Quality control completed: ${data.passedQuantity} passed, ${data.repairedQuantity} repaired, ${data.rejectedQuantity} rejected. Inspector: ${inspectorId}`,
+          userId: inspectorId,
+          createdAt: now
         })
-        .where(eq(workOrders.id, data.workOrderId))
 
-      // Add to production stage history
-      await db.insert(productionStageHistory).values({
-        id: nanoid(),
-        workOrderId: data.workOrderId,
-        stage: "quality_control",
-        startedAt: now,
-        completedAt: now,
-        duration: 0, // Quality control inspection time
-        notes: `Quality control passed by inspector ${inspectorId}`,
-        userId: inspectorId,
-        createdAt: now
-      })
-
-      await db.insert(productionStageHistory).values({
-        id: nanoid(),
-        workOrderId: data.workOrderId,
-        stage: "finishing",
-        startedAt: now,
-        userId: inspectorId,
-        createdAt: now
-      })
+        await db.insert(productionStageHistory).values({
+          id: nanoid(),
+          workOrderId: data.workOrderId,
+          stage: "finishing",
+          startedAt: now,
+          userId: inspectorId,
+          createdAt: now
+        })
+      }
     }
 
     return {
@@ -390,8 +439,8 @@ export async function getQualityMetrics(params?: {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
-    // Get basic counts
-    const [statusCounts, stageCounts, inspectorCounts] = await Promise.all([
+    // Get basic counts and unit quantities
+    const [statusCounts, stageCounts, inspectorCounts, quantityTotals] = await Promise.all([
       db
         .select({
           status: qualityInspections.status,
@@ -417,7 +466,18 @@ export async function getQualityMetrics(params?: {
         })
         .from(qualityInspections)
         .where(whereClause)
-        .groupBy(qualityInspections.inspectedBy)
+        .groupBy(qualityInspections.inspectedBy),
+
+      db
+        .select({
+          totalUnits: sql<number>`SUM(${qualityInspections.totalQuantity})`,
+          passedUnits: sql<number>`SUM(${qualityInspections.passedQuantity})`,
+          repairedUnits: sql<number>`SUM(${qualityInspections.repairedQuantity})`,
+          rejectedUnits: sql<number>`SUM(${qualityInspections.rejectedQuantity})`
+        })
+        .from(qualityInspections)
+        .where(whereClause)
+        .limit(1)
     ])
 
     // Calculate metrics
@@ -430,6 +490,16 @@ export async function getQualityMetrics(params?: {
     const passRate = totalInspections > 0 ? (passedInspections / totalInspections) * 100 : 0
     const repairRate = totalInspections > 0 ? (repairedInspections / totalInspections) * 100 : 0
     const rejectRate = totalInspections > 0 ? (rejectedInspections / totalInspections) * 100 : 0
+
+    // Calculate unit-level metrics
+    const totalUnitsInspected = quantityTotals[0]?.totalUnits || 0
+    const totalUnitsPassed = quantityTotals[0]?.passedUnits || 0
+    const totalUnitsRepaired = quantityTotals[0]?.repairedUnits || 0
+    const totalUnitsRejected = quantityTotals[0]?.rejectedUnits || 0
+
+    const unitPassRate = totalUnitsInspected > 0 ? (totalUnitsPassed / totalUnitsInspected) * 100 : 0
+    const unitRepairRate = totalUnitsInspected > 0 ? (totalUnitsRepaired / totalUnitsInspected) * 100 : 0
+    const unitRejectRate = totalUnitsInspected > 0 ? (totalUnitsRejected / totalUnitsInspected) * 100 : 0
 
     // Calculate average inspection time (from production stage history)
     const avgTimeResult = await db
@@ -458,6 +528,10 @@ export async function getQualityMetrics(params?: {
 
     const metrics: QualityMetrics = {
       totalInspections,
+      totalUnitsInspected,
+      totalUnitsPassed,
+      totalUnitsRepaired,
+      totalUnitsRejected,
       passedInspections,
       repairedInspections,
       rejectedInspections,
@@ -465,6 +539,9 @@ export async function getQualityMetrics(params?: {
       passRate,
       repairRate,
       rejectRate,
+      unitPassRate,
+      unitRepairRate,
+      unitRejectRate,
       averageInspectionTime,
       inspectionsByStage,
       inspectionsByInspector
@@ -479,6 +556,53 @@ export async function getQualityMetrics(params?: {
     return {
       success: false,
       error: "Failed to fetch quality metrics"
+    }
+  }
+}
+
+// Get specific work order by ID for quality control inspection
+export async function getWorkOrderById(workOrderId: string) {
+  try {
+    const result = await db
+      .select({
+        id: workOrders.id,
+        workOrderNumber: workOrders.workOrderNumber,
+        currentStage: workOrders.currentStage,
+        priority: workOrders.priority,
+        salesOrderId: workOrders.salesOrderId,
+        salesOrderItemId: workOrders.salesOrderItemId,
+        productName: salesOrderItems.productName,
+        quantity: salesOrderItems.quantity,
+        customerName: customers.name,
+        createdAt: workOrders.createdAt,
+        updatedAt: workOrders.updatedAt,
+        inspectionId: qualityInspections.id,
+        inspectionStatus: qualityInspections.status,
+      })
+      .from(workOrders)
+      .leftJoin(salesOrderItems, eq(workOrders.salesOrderItemId, salesOrderItems.id))
+      .leftJoin(salesOrders, eq(workOrders.salesOrderId, salesOrders.id))
+      .leftJoin(customers, eq(salesOrders.customerId, customers.id))
+      .leftJoin(qualityInspections, eq(workOrders.id, qualityInspections.workOrderId))
+      .where(eq(workOrders.id, workOrderId))
+      .limit(1)
+
+    if (result.length === 0) {
+      return {
+        success: false,
+        error: "Work order not found"
+      }
+    }
+
+    return {
+      success: true,
+      data: result[0]
+    }
+  } catch (error) {
+    console.error("Failed to fetch work order:", error)
+    return {
+      success: false,
+      error: "Failed to fetch work order"
     }
   }
 }
@@ -499,11 +623,14 @@ export async function getWorkOrdersForQualityControl() {
         customerName: customers.name,
         createdAt: workOrders.createdAt,
         updatedAt: workOrders.updatedAt,
+        inspectionId: qualityInspections.id,
+        inspectionStatus: qualityInspections.status,
       })
       .from(workOrders)
       .leftJoin(salesOrderItems, eq(workOrders.salesOrderItemId, salesOrderItems.id))
       .leftJoin(salesOrders, eq(workOrders.salesOrderId, salesOrders.id))
       .leftJoin(customers, eq(salesOrders.customerId, customers.id))
+      .leftJoin(qualityInspections, eq(workOrders.id, qualityInspections.workOrderId))
       .where(eq(workOrders.currentStage, "quality_control"))
       .orderBy(asc(workOrders.priority), asc(workOrders.createdAt))
 

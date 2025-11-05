@@ -49,6 +49,10 @@ interface QualityInspection {
   status: "pending" | "pass" | "repair" | "reject"
   inspectedBy?: string
   inspectionDate: Date
+  totalQuantity: number
+  passedQuantity: number
+  repairedQuantity: number
+  rejectedQuantity: number
   issues?: any
   repairNotes?: string
   finalStatus?: "pending" | "pass" | "repair" | "reject"
@@ -117,38 +121,58 @@ export function QualityControlList() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, passed?: number, repaired?: number, rejected?: number, total?: number) => {
+    // Create a more descriptive status based on the quantities
+    if (passed === total) {
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1">
+          <CheckCircle className="h-3 w-3" />
+          All Passed
+        </Badge>
+      )
+    }
+
+    if (rejected === total) {
+      return (
+        <Badge className="bg-red-100 text-red-800 border-red-200 flex items-center gap-1">
+          <XCircle className="h-3 w-3" />
+          All Rejected
+        </Badge>
+      )
+    }
+
+    if (repaired === total) {
+      return (
+        <Badge className="bg-orange-100 text-orange-800 border-orange-200 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          All Repaired
+        </Badge>
+      )
+    }
+
+    // Mixed result - show detailed breakdown
     const statusConfig = {
-      pending: {
-        label: "Pending",
-        className: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        icon: Clock
-      },
-      pass: {
-        label: "Pass",
-        className: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle
-      },
-      repair: {
-        label: "Repair",
-        className: "bg-orange-100 text-orange-800 border-orange-200",
-        icon: AlertCircle
-      },
-      reject: {
-        label: "Reject",
-        className: "bg-red-100 text-red-800 border-red-200",
-        icon: XCircle
-      }
+      pending: { label: "Pending", className: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
+      pass: { label: "Mostly Passed", className: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
+      repair: { label: "Mixed Result", className: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: AlertCircle },
+      reject: { label: "Issues Found", className: "bg-red-100 text-red-800 border-red-200", icon: XCircle }
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
     const Icon = config.icon
 
     return (
-      <Badge className={`${config.className} flex items-center gap-1`}>
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
+      <div className="flex items-center gap-1">
+        <Badge className={`${config.className} flex items-center gap-1`}>
+          <Icon className="h-3 w-3" />
+          {config.label}
+        </Badge>
+        {total && passed !== undefined && (
+          <Badge variant="outline" className="text-xs">
+            {passed}/{total}
+          </Badge>
+        )}
+      </div>
     )
   }
 
@@ -207,7 +231,7 @@ export function QualityControlList() {
               </CardDescription>
             </div>
             <Button asChild>
-              <Link href="/quality-control/new">
+              <Link href="/quality-control/select-wo">
                 <Plus className="mr-2 h-4 w-4" />
                 New Inspection
               </Link>
@@ -337,6 +361,7 @@ export function QualityControlList() {
                     <TableHead>Product</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Stage</TableHead>
+                    <TableHead>Results</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Inspection Date</TableHead>
                     <TableHead className="w-[70px]"></TableHead>
@@ -367,7 +392,29 @@ export function QualityControlList() {
                         {getStageBadge(inspection.stage)}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(inspection.status)}
+                        {inspection.totalQuantity ? (
+                          <div className="flex items-center gap-1 text-xs">
+                            <span className="text-green-600">{inspection.passedQuantity || 0}</span>
+                            <span>/</span>
+                            <span className="text-orange-600">{inspection.repairedQuantity || 0}</span>
+                            <span>/</span>
+                            <span className="text-red-600">{inspection.rejectedQuantity || 0}</span>
+                            <span className="text-muted-foreground ml-1">
+                              ({inspection.totalQuantity})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(
+                          inspection.status,
+                          inspection.passedQuantity,
+                          inspection.repairedQuantity,
+                          inspection.rejectedQuantity,
+                          inspection.totalQuantity
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
