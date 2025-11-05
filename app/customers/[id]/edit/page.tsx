@@ -4,13 +4,14 @@ import { CustomerForm } from '@/components/customers/customer-form'
 import { getCustomerById } from '@/lib/actions/customers'
 
 interface EditCustomerPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function EditCustomerPage({ params }: EditCustomerPageProps) {
-  const result = await getCustomerById(params.id)
+  const { id } = await params
+  const result = await getCustomerById(id)
 
   if (!result.success || !result.data) {
     notFound()

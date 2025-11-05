@@ -45,7 +45,7 @@ interface SalesOrder {
   orderDate: string | Date
   targetDeliveryDate: string | Date
   actualDeliveryDate?: string | Date | null
-  status: 'draft' | 'processing' | 'completed' | 'cancelled'
+  status: 'draft' | 'on_review' | 'approve' | 'cancelled'
   totalAmount: string
   notes?: string | null
   createdBy: string

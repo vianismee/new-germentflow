@@ -4,13 +4,14 @@ import { CustomerDetailEnhanced } from '@/components/customers/customer-detail-e
 import { getCustomerById } from '@/lib/actions/customers'
 
 interface CustomerPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function CustomerPage({ params }: CustomerPageProps) {
-  const result = await getCustomerById(params.id)
+  const { id } = await params
+  const result = await getCustomerById(id)
 
   if (!result.success || !result.data) {
     notFound()

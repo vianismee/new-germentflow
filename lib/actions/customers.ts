@@ -267,7 +267,7 @@ export async function getCustomerOrderStats(customerId: string) {
       .from(salesOrders)
       .where(and(
         eq(salesOrders.customerId, customerId),
-        eq(salesOrders.status, 'completed')
+        eq(salesOrders.status, 'approve')
       ))
 
     const lastOrder = await db
@@ -392,7 +392,7 @@ export async function searchCustomerOrders(customerId: string, query: string, st
     }
 
     if (status && status !== 'all') {
-      whereConditions.push(eq(salesOrders.status, status as 'draft' | 'processing' | 'completed' | 'cancelled'))
+      whereConditions.push(eq(salesOrders.status, status as 'draft' | 'on_review' | 'approve' | 'cancelled'))
     }
 
     const orders = await db

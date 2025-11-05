@@ -44,14 +44,14 @@ export function useRealtimeWorkOrder({
   // Setup realtime subscriptions
   const { isConnected } = useRealtimeWorkOrders({
     enabled: enabled && !!workOrderId,
-    onWorkOrderChange: useCallback((payload) => {
+    onWorkOrderChange: useCallback((payload: any) => {
       // Check if this change affects our work order
       if (payload.new?.id === workOrderId || payload.old?.id === workOrderId) {
         console.log('Work order updated, refreshing data...')
         fetchWorkOrder()
       }
     }, [workOrderId, fetchWorkOrder]),
-    onStageHistoryChange: useCallback((payload) => {
+    onStageHistoryChange: useCallback((payload: any) => {
       // Check if this stage history change affects our work order
       if (payload.new?.work_order_id === workOrderId || payload.old?.work_order_id === workOrderId) {
         console.log('Stage history updated, refreshing work order...')

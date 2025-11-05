@@ -40,11 +40,11 @@ export function useRealtimeWorkOrdersList({
   // Setup realtime subscriptions
   const { isConnected } = useRealtimeWorkOrders({
     enabled,
-    onWorkOrderChange: useCallback((payload) => {
+    onWorkOrderChange: useCallback((payload: any) => {
       console.log('Work orders list updated, refreshing data...')
       fetchWorkOrders()
     }, [fetchWorkOrders]),
-    onStageHistoryChange: useCallback((payload) => {
+    onStageHistoryChange: useCallback((payload: any) => {
       console.log('Stage history updated, refreshing work orders list...')
       fetchWorkOrders()
     }, [fetchWorkOrders])

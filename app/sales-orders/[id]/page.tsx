@@ -4,13 +4,14 @@ import { SalesOrderDetail } from '@/components/sales-orders/sales-order-detail'
 import { getSalesOrderById } from '@/lib/actions/sales-orders'
 
 interface SalesOrderPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function SalesOrderPage({ params }: SalesOrderPageProps) {
-  const result = await getSalesOrderById(params.id)
+  const { id } = await params
+  const result = await getSalesOrderById(id)
 
   if (!result.success || !result.data) {
     notFound()

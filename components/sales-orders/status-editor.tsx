@@ -66,12 +66,12 @@ export function StatusEditor({ orderId, currentStatus, onStatusChange }: StatusE
 
     setIsLoading(true)
     try {
-      const result = await updateOrderStatus(orderId, newStatus)
+      const result = await updateOrderStatus(orderId, newStatus as 'draft' | 'on_review' | 'approve' | 'cancelled')
 
       if (result.success) {
         toast({
           title: 'Status Updated',
-          description: `Order status changed to ${statusConfig[newStatus].label}`,
+          description: `Order status changed to ${statusConfig[newStatus as keyof typeof statusConfig].label}`,
         })
         onStatusChange?.(newStatus)
       } else {

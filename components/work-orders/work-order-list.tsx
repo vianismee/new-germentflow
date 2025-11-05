@@ -27,16 +27,14 @@ import {
   Eye,
   Plus,
   Calendar,
-  User,
   Package,
-  Clock,
   CheckCircle,
   AlertCircle,
   FileText,
   Settings,
   Trash2
 } from 'lucide-react'
-import { getWorkOrders, deleteWorkOrder, getApprovedSalesOrdersForWorkOrders, createWorkOrderFromSalesOrderItem } from '@/lib/actions/work-orders'
+import { deleteWorkOrder } from '@/lib/actions/work-orders'
 import { useToast } from '@/hooks/use-toast'
 import { useRealtimeWorkOrdersList } from '@/hooks/use-realtime-work-orders-list'
 import { format } from 'date-fns'
@@ -48,7 +46,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 
 interface WorkOrder {
@@ -73,39 +70,17 @@ interface WorkOrder {
   color?: string | null
 }
 
-interface SalesOrderItem {
-  id: string
-  productName: string
-  quantity: number
-  size?: string | null
-  color?: string | null
-}
-
-interface SalesOrder {
-  id: string
-  orderNumber: string
-  customerName?: string
-  orderDate: string | Date
-  targetDeliveryDate: string | Date
-  items?: SalesOrderItem[]
-}
 
 export function WorkOrderList() {
   const { toast } = useToast()
 
   // Use realtime hook for work orders
-  const { workOrders, loading, error, isConnected, refresh } = useRealtimeWorkOrdersList()
+  const { workOrders, loading, isConnected } = useRealtimeWorkOrdersList()
 
-  const [approvedSalesOrders, setApprovedSalesOrders] = useState<SalesOrder[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null)
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-
-  useEffect(() => {
-    fetchApprovedSalesOrders()
-  }, [])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -114,24 +89,6 @@ export function WorkOrderList() {
 
     return () => clearTimeout(timeoutId)
   }, [searchQuery, stageFilter])
-
-  const fetchApprovedSalesOrders = async () => {
-    try {
-      const approvedSalesResult = await getApprovedSalesOrdersForWorkOrders()
-
-      if (approvedSalesResult.success && approvedSalesResult.data) {
-        console.log('Approved sales orders data:', approvedSalesResult.data)
-        // The data is already correctly grouped from the backend
-        setApprovedSalesOrders(approvedSalesResult.data)
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch approved sales orders',
-        variant: 'destructive',
-      })
-    }
-  }
 
   const filterWorkOrders = () => {
     // This is already handled by the useEffect with search and stage filter
@@ -161,7 +118,7 @@ export function WorkOrderList() {
           variant: 'destructive',
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to delete work order',
@@ -173,35 +130,7 @@ export function WorkOrderList() {
     }
   }
 
-  const handleCreateWorkOrder = async (salesOrderItemId: string) => {
-    try {
-      // TODO: Get actual user ID from authentication
-      const userId = 'system-user' // Temporary user ID for testing
-      const result = await createWorkOrderFromSalesOrderItem(salesOrderItemId, userId)
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        })
-        setCreateDialogOpen(false)
-        fetchApprovedSalesOrders() // Refresh approved sales orders
-        // Real-time updates will handle the work order list refresh automatically
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error,
-          variant: 'destructive',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create work order',
-        variant: 'destructive',
-      })
-    }
-  }
-
+  
   const getStageBadge = (stage: string) => {
     const stageConfig = {
       order_processing: {
@@ -319,73 +248,15 @@ export function WorkOrderList() {
                 )}
               </div>
               <CardDescription>
-                Manage production work orders and track their progress through the 8-stage workflow.
-                {isConnected && " Real-time updates enabled."}
+                Track work orders through the 8-stage production workflow.
               </CardDescription>
             </div>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Work Order
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create Work Order from Approved Sales Order</DialogTitle>
-                  <DialogDescription>
-                    Select a sales order item to convert into a work order. Only approved sales orders are shown.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {approvedSalesOrders.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                        No approved sales orders available
-                      </h3>
-                      <p className="text-muted-foreground">
-                        Approve some sales orders first to create work orders.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {approvedSalesOrders.map((order) => (
-                        <div key={order.id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h4 className="font-semibold">{order.orderNumber}</h4>
-                              <p className="text-sm text-muted-foreground">Customer: {order.customerName}</p>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Target: {formatDate(order.targetDeliveryDate)}
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            {order.items?.map((item) => (
-                              <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded">
-                                <div>
-                                  <p className="font-medium">{item.productName}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Qty: {item.quantity} {item.size && `| Size: ${item.size}`} {item.color && `| Color: ${item.color}`}
-                                  </p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleCreateWorkOrder(item.id)}
-                                >
-                                  Create WO
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button asChild>
+              <Link href="/work-orders/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Work Order
+              </Link>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -452,9 +323,11 @@ export function WorkOrderList() {
                 }
               </p>
               {!(searchQuery || stageFilter !== 'all') && (
-                <Button onClick={() => setCreateDialogOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create First Work Order
+                <Button asChild>
+                  <Link href="/work-orders/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create First Work Order
+                  </Link>
                 </Button>
               )}
             </div>

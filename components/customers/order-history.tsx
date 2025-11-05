@@ -39,7 +39,7 @@ interface SalesOrder {
   orderDate: string | Date
   targetDeliveryDate: string | Date
   actualDeliveryDate?: string | Date | null
-  status: 'draft' | 'processing' | 'completed' | 'cancelled'
+  status: 'draft' | 'on_review' | 'approve' | 'cancelled'
   totalAmount: string
   notes?: string | null
   createdBy: string
@@ -186,7 +186,7 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
   }
 
   const isOrderOverdue = (order: SalesOrder) => {
-    if (order.status === 'completed' || order.status === 'cancelled') return false
+    if (order.status === 'approve' || order.status === 'cancelled') return false
     return new Date(order.targetDeliveryDate) < new Date()
   }
 
@@ -266,7 +266,7 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
               <div className="min-w-0">
                 <p className="text-xs lg:text-sm font-medium text-green-600">Done</p>
                 <p className="text-lg lg:text-2xl font-bold text-green-800 truncate">
-                  {orders.filter(o => o.status === 'completed').length}
+                  {orders.filter(o => o.status === 'approve').length}
                 </p>
               </div>
             </div>
@@ -275,7 +275,7 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
               <div className="min-w-0">
                 <p className="text-xs lg:text-sm font-medium text-yellow-600">Active</p>
                 <p className="text-lg lg:text-2xl font-bold text-yellow-800 truncate">
-                  {orders.filter(o => o.status === 'processing').length}
+                  {orders.filter(o => o.status === 'on_review').length}
                 </p>
               </div>
             </div>
@@ -429,7 +429,7 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
                               </div>
                               <div className="flex items-center space-x-3 text-sm">
                                 <div className={`w-3 h-3 rounded-full ${
-                                  order.status === 'completed' ? 'bg-green-500' :
+                                  order.status === 'approve' ? 'bg-green-500' :
                                   order.status === 'cancelled' ? 'bg-red-500' :
                                   'bg-yellow-500'
                                 }`}></div>

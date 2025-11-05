@@ -4,27 +4,19 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useRealtimeWorkOrder } from '@/hooks/use-realtime-work-order'
 import {
   ArrowLeft,
-  Edit,
-  Trash2,
   Package,
-  Calendar,
-  Clock,
   CheckCircle,
   AlertCircle,
   FileText,
-  User,
-  Play,
-  RotateCcw,
   MessageSquare,
   Settings
 } from 'lucide-react'
-import { deleteWorkOrder, updateWorkOrderStage } from '@/lib/actions/work-orders'
+import { updateWorkOrderStage } from '@/lib/actions/work-orders'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -74,45 +66,18 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
   const { toast } = useToast()
 
   // Use realtime hook for work order data
-  const { workOrder, loading: realtimeLoading, isConnected } = useRealtimeWorkOrder({
+  const { workOrder } = useRealtimeWorkOrder({
     workOrderId: initialWorkOrder.id,
     initialData: initialWorkOrder
   })
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [stageNotes, setStageNotes] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleDelete = async () => {
-    setLoading(true)
-    try {
-      const result = await deleteWorkOrder(workOrder.id)
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: result.message,
-        })
-        window.location.href = '/work-orders'
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error,
-          variant: 'destructive',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete work order',
-        variant: 'destructive',
-      })
-    } finally {
-      setLoading(false)
-      setDeleteDialogOpen(false)
-    }
-  }
-
+  
   const handleStageUpdate = async (newStage: string) => {
+    if (!workOrder) return
+
     setLoading(true)
     try {
       // TODO: Get actual user ID from authentication
@@ -132,7 +97,7 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
           variant: 'destructive',
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to update stage',
@@ -217,17 +182,25 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
   }
 
   const isOverdue = () => {
-    if (workOrder.currentStage === 'delivered') return false
+    if (!workOrder || workOrder.currentStage === 'delivered') return false
     if (workOrder.estimatedCompletion) {
       return new Date(workOrder.estimatedCompletion) < new Date()
     }
     return false
   }
 
+  if (!workOrder) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Work order not found</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 mt-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
           <Button variant="outline" size="sm" asChild>
             <Link href="/work-orders">
@@ -253,25 +226,17 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDeleteDialogOpen(true)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
+          {/* Delete functionality removed - work orders should not be deleted after creation */}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
           {/* Work Order Details */}
           <Card>
-            <CardHeader>
-              <CardTitle>Work Order Details</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Work Order Details</CardTitle>
               <CardDescription>
                 Basic information about this work order
               </CardDescription>
@@ -358,7 +323,7 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
               <StageWorkflow
                 workOrderId={workOrder.id}
                 currentStage={workOrder.currentStage}
-                stageHistory={workOrder.stageHistory || []}
+                stageHistory={(workOrder as any).stageHistory || []}
                 onStageUpdate={handleStageUpdate}
                 loading={loading}
               />
@@ -396,13 +361,13 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:space-y-8">
           {/* Quick Actions */}
           <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <Button variant="outline" className="w-full justify-start" asChild>
                 <Link href={`/sales-orders/${workOrder.salesOrderId}`}>
                   <FileText className="mr-2 h-4 w-4" />
@@ -414,11 +379,11 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
 
           {/* Production Timeline */}
           <Card>
-            <CardHeader>
-              <CardTitle>Production Timeline</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Production Timeline</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <ProductionLog stageHistory={workOrder.stageHistory || []} />
+            <CardContent className="pt-0">
+              <ProductionLog stageHistory={(workOrder as any).stageHistory || []} />
             </CardContent>
           </Card>
         </div>

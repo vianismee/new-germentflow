@@ -131,7 +131,7 @@ export async function createWorkOrderFromSalesOrderItem(
     }
   } catch (error) {
     console.error('Error creating work order:', error)
-    return { success: false, error: 'Failed to create work order', details: error.message }
+    return { success: false, error: 'Failed to create work order', details: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
@@ -171,7 +171,7 @@ export async function getWorkOrders() {
       basicWorkOrders.map(async (workOrder) => {
         try {
           // Get related sales order and item data
-          const [salesOrder, salesOrderItem, customer] = await Promise.all([
+          const [salesOrder, salesOrderItem] = await Promise.all([
             db
               .select({
                 id: salesOrders.id,
@@ -240,8 +240,8 @@ export async function getWorkOrders() {
 
   } catch (error) {
     console.error('Error fetching work orders:', error)
-    console.error('Error details:', error.message)
-    return { success: false, error: 'Failed to fetch work orders', details: error.message }
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
+    return { success: false, error: 'Failed to fetch work orders', details: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
@@ -276,7 +276,7 @@ export async function getWorkOrderById(id: string) {
     const workOrder = basicWorkOrderData[0]
 
     // Get related data using separate queries
-    const [salesOrder, salesOrderItem, customer] = await Promise.all([
+    const [salesOrder, salesOrderItem] = await Promise.all([
       db
         .select({
           id: salesOrders.id,
@@ -359,7 +359,7 @@ export async function startProductionStage(
       .where(
         and(
           eq(productionStageHistory.workOrderId, workOrderId),
-          eq(productionStageHistory.stage, stage),
+          eq(productionStageHistory.stage, stage as any),
           sql`${productionStageHistory.completedAt} IS NULL`
         )
       )
@@ -373,7 +373,7 @@ export async function startProductionStage(
     const [newStageHistory] = await db.insert(productionStageHistory).values({
       id: nanoid(),
       workOrderId,
-      stage,
+      stage: stage as any,
       startedAt: new Date(),
       userId,
       notes,
@@ -419,7 +419,7 @@ export async function finishProductionStage(
       .where(
         and(
           eq(productionStageHistory.workOrderId, workOrderId),
-          eq(productionStageHistory.stage, stage),
+          eq(productionStageHistory.stage, stage as any),
           sql`${productionStageHistory.completedAt} IS NULL`
         )
       )
@@ -476,7 +476,7 @@ export async function finishProductionStage(
       await db.insert(productionStageHistory).values({
         id: nanoid(),
         workOrderId,
-        stage: nextStage,
+        stage: nextStage as any,
         startedAt: new Date(),
         userId,
         notes: `Auto-started after completing ${stage.replace('_', ' ')}`,
@@ -549,7 +549,7 @@ export async function updateWorkOrderStage(
     await db.insert(productionStageHistory).values({
       id: nanoid(),
       workOrderId,
-      stage: newStage,
+      stage: newStage as any,
       startedAt: new Date(),
       userId,
       notes,
@@ -581,7 +581,7 @@ export async function debugSalesOrdersAndWorkOrders() {
       console.log('All Sales Orders:', allSalesOrders)
     } catch (e) {
       console.error('Error fetching sales orders:', e)
-      return { success: false, error: 'Failed to fetch sales orders', details: e.message }
+      return { success: false, error: 'Failed to fetch sales orders', details: e instanceof Error ? e.message : 'Unknown error' }
     }
 
     // Check approved sales orders
@@ -594,7 +594,7 @@ export async function debugSalesOrdersAndWorkOrders() {
       console.log('Approved Sales Orders:', approvedSalesOrders)
     } catch (e) {
       console.error('Error fetching approved sales orders:', e)
-      return { success: false, error: 'Failed to fetch approved sales orders', details: e.message }
+      return { success: false, error: 'Failed to fetch approved sales orders', details: e instanceof Error ? e.message : 'Unknown error' }
     }
 
     // Check sales order items
@@ -604,7 +604,7 @@ export async function debugSalesOrdersAndWorkOrders() {
       console.log('All Sales Order Items:', allSalesOrderItems)
     } catch (e) {
       console.error('Error fetching sales order items:', e)
-      return { success: false, error: 'Failed to fetch sales order items', details: e.message }
+      return { success: false, error: 'Failed to fetch sales order items', details: e instanceof Error ? e.message : 'Unknown error' }
     }
 
     // Check work orders
@@ -614,11 +614,11 @@ export async function debugSalesOrdersAndWorkOrders() {
       console.log('All Work Orders:', allWorkOrders)
     } catch (e) {
       console.error('Error fetching work orders:', e)
-      return { success: false, error: 'Failed to fetch work orders', details: e.message }
+      return { success: false, error: 'Failed to fetch work orders', details: e instanceof Error ? e.message : 'Unknown error' }
     }
 
     // Check items for approved orders
-    let itemsForApprovedOrders = []
+    let itemsForApprovedOrders: any[] = []
     if (approvedSalesOrders.length > 0) {
       try {
         const approvedOrderIds = approvedSalesOrders.map(o => o.id)
@@ -629,7 +629,7 @@ export async function debugSalesOrdersAndWorkOrders() {
         console.log('Items for approved orders:', itemsForApprovedOrders)
       } catch (e) {
         console.error('Error fetching items for approved orders:', e)
-        return { success: false, error: 'Failed to fetch items for approved orders', details: e.message }
+        return { success: false, error: 'Failed to fetch items for approved orders', details: e instanceof Error ? e.message : 'Unknown error' }
       }
     }
 
@@ -645,7 +645,7 @@ export async function debugSalesOrdersAndWorkOrders() {
     }
   } catch (error) {
     console.error('Debug error:', error)
-    return { success: false, error: 'Debug failed', details: error.message }
+    return { success: false, error: 'Debug failed', details: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
@@ -726,7 +726,7 @@ export async function getApprovedSalesOrdersForWorkOrders() {
       .from(customers)
       .where(inArray(customers.id, customerIds)) : []
 
-    const customerMap = customerData.reduce((acc, customer) => {
+    const customerMap = customerData.reduce((acc: Record<string, any>, customer) => {
       acc[customer.id] = customer.name
       return acc
     }, {})
@@ -750,7 +750,7 @@ export async function getApprovedSalesOrdersForWorkOrders() {
     return { success: true, data: groupedOrders }
   } catch (error) {
     console.error('Error fetching approved sales orders:', error)
-    return { success: false, error: 'Failed to fetch approved sales orders', details: error.message }
+    return { success: false, error: 'Failed to fetch approved sales orders', details: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
@@ -781,7 +781,7 @@ export async function createBulkWorkOrders(
           errors.push({ itemId: salesOrderItemId, error: result.error })
         }
       } catch (error) {
-        errors.push({ itemId: salesOrderItemId, error: error.message })
+        errors.push({ itemId: salesOrderItemId, error: error instanceof Error ? error.message : 'Unknown error' })
       }
     }
 
@@ -804,7 +804,7 @@ export async function createBulkWorkOrders(
     }
   } catch (error) {
     console.error('Error creating bulk work orders:', error)
-    return { success: false, error: 'Failed to create bulk work orders', details: error.message }
+    return { success: false, error: 'Failed to create bulk work orders', details: error instanceof Error ? error.message : 'Unknown error' }
   }
 }
 
@@ -822,62 +822,50 @@ export async function getApprovedSalesOrdersForWorkOrdersWithFilters(filters: {
     console.log('=== Getting approved sales orders with filters ===')
     console.log('Filters:', filters)
 
-    // Step 1: Get approved sales orders with filters
-    let query = db
-      .select()
-      .from(salesOrders)
-      .where(eq(salesOrders.status, 'approve'))
+    // Build all filter conditions
+    const conditions = [eq(salesOrders.status, 'approve')]
 
     // Apply date filters
     if (filters.dateFrom) {
-      query = query.where(and(
-        eq(salesOrders.status, 'approve'),
-        sql`${salesOrders.orderDate} >= ${filters.dateFrom}`
-      ))
+      conditions.push(sql`${salesOrders.orderDate} >= ${filters.dateFrom}`)
     }
 
     if (filters.dateTo) {
-      query = query.where(and(
-        eq(salesOrders.status, 'approve'),
-        sql`${salesOrders.orderDate} <= ${filters.dateTo}`
-      ))
+      conditions.push(sql`${salesOrders.orderDate} <= ${filters.dateTo}`)
     }
 
     // Apply customer filter
     if (filters.customerId) {
-      query = query.where(and(
-        eq(salesOrders.status, 'approve'),
-        eq(salesOrders.customerId, filters.customerId)
-      ))
+      conditions.push(eq(salesOrders.customerId, filters.customerId))
     }
 
     // Apply urgent filter (delivery within 7 days)
     if (filters.urgentOnly) {
       const sevenDaysFromNow = new Date()
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
-      query = query.where(and(
-        eq(salesOrders.status, 'approve'),
-        sql`${salesOrders.targetDeliveryDate} <= ${sevenDaysFromNow}`
-      ))
+      conditions.push(sql`${salesOrders.targetDeliveryDate} <= ${sevenDaysFromNow}`)
     }
 
-    // Apply search term
+    // Apply search term to sales orders
     if (filters.searchTerm) {
       const searchTerm = `%${filters.searchTerm}%`
-      query = query.where(and(
-        eq(salesOrders.status, 'approve'),
-        sql`(LOWER(${salesOrders.orderNumber}) LIKE LOWER(${searchTerm}) OR
-             LOWER(${salesOrders.notes}) LIKE LOWER(${searchTerm}))`
-      ))
+      conditions.push(sql`(LOWER(${salesOrders.orderNumber}) LIKE LOWER(${searchTerm}) OR
+             LOWER(${salesOrders.notes}) LIKE LOWER(${searchTerm}))`)
     }
+
+    // Build the final query with all conditions
+    let query = db
+      .select()
+      .from(salesOrders)
+      .where(and(...conditions))
 
     // Apply pagination
     if (filters.limit) {
-      query = query.limit(filters.limit)
+      query = (query as any).limit(filters.limit)
     }
 
     if (filters.offset) {
-      query = query.offset(filters.offset)
+      query = (query as any).offset(filters.offset)
     }
 
     const approvedOrders = await query.orderBy(desc(salesOrders.orderDate))
@@ -900,24 +888,21 @@ export async function getApprovedSalesOrdersForWorkOrdersWithFilters(filters: {
     // Step 3: Get sales order items with additional filtering
     const approvedOrderIds = approvedOrders.map(o => o.id)
 
-    let itemsQuery = db
-      .select()
-      .from(salesOrderItems)
-      .where(inArray(salesOrderItems.salesOrderId, approvedOrderIds))
+    // Build items query conditions
+    const itemConditions = [inArray(salesOrderItems.salesOrderId, approvedOrderIds)]
 
     // Apply search term to items as well
     if (filters.searchTerm) {
       const searchTerm = `%${filters.searchTerm}%`
-      itemsQuery = db
-        .select()
-        .from(salesOrderItems)
-        .where(and(
-          inArray(salesOrderItems.salesOrderId, approvedOrderIds),
-          sql`(LOWER(${salesOrderItems.productName}) LIKE LOWER(${searchTerm}) OR
+      itemConditions.push(sql`(LOWER(${salesOrderItems.productName}) LIKE LOWER(${searchTerm}) OR
                LOWER(${salesOrderItems.color}) LIKE LOWER(${searchTerm}) OR
-               LOWER(${salesOrderItems.size}) LIKE LOWER(${searchTerm}))`
-        ))
+               LOWER(${salesOrderItems.size}) LIKE LOWER(${searchTerm}))`)
     }
+
+    const itemsQuery = db
+      .select()
+      .from(salesOrderItems)
+      .where(and(...itemConditions))
 
     const allApprovedItems = await itemsQuery
 
@@ -934,7 +919,7 @@ export async function getApprovedSalesOrdersForWorkOrdersWithFilters(filters: {
       .from(customers)
       .where(inArray(customers.id, customerIds)) : []
 
-    const customerMap = customerData.reduce((acc, customer) => {
+    const customerMap = customerData.reduce((acc: Record<string, any>, customer) => {
       acc[customer.id] = customer.name
       return acc
     }, {})
@@ -956,7 +941,7 @@ export async function getApprovedSalesOrdersForWorkOrdersWithFilters(filters: {
 
     console.log('Grouped orders with filters:', groupedOrders)
 
-    // Get total count for pagination
+    // Get total count for pagination (without filters for simplicity)
     const totalCountQuery = db
       .select({ count: sql`count(*)` })
       .from(salesOrders)
@@ -970,13 +955,18 @@ export async function getApprovedSalesOrdersForWorkOrdersWithFilters(filters: {
       data: groupedOrders,
       totalCount,
       filters: {
-        applied: Object.keys(filters).filter(key => filters[key] !== undefined && filters[key] !== ''),
+        applied: Object.keys(filters).filter(key => filters[key as keyof typeof filters] !== undefined && filters[key as keyof typeof filters] !== ''),
         count: groupedOrders.length
       }
     }
   } catch (error) {
     console.error('Error fetching filtered approved sales orders:', error)
-    return { success: false, error: 'Failed to fetch filtered approved sales orders', details: error.message }
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
+    return {
+      success: false,
+      error: 'Failed to fetch filtered approved sales orders',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }
 

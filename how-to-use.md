@@ -1,3 +1,7 @@
+
+
+
+```color-picker.tsx
 "use client";
 import { Portal } from "@ark-ui/react/portal";
 import { ColorPicker, parseColor } from "@ark-ui/react/color-picker";
@@ -80,4 +84,4 @@ export default function BasicColorPicker() {
     </div>
   );
 }
-,
+```

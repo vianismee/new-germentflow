@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Play, CheckCircle, Clock, RotateCcw, AlertCircle, FileText, Package, Settings, Square } from 'lucide-react'
+import { Play, CheckCircle, Clock, RotateCcw, AlertCircle, FileText, Package, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { startProductionStage, finishProductionStage } from '@/lib/actions/work-orders'
 import { useToast } from '@/hooks/use-toast'
@@ -160,7 +160,7 @@ export function StageWorkflow({ workOrderId, currentStage, stageHistory, onStage
           variant: 'destructive',
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to start stage',
@@ -191,7 +191,7 @@ export function StageWorkflow({ workOrderId, currentStage, stageHistory, onStage
           variant: 'destructive',
         })
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'Failed to finish stage',

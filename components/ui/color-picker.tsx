@@ -38,36 +38,38 @@ const PRESET_COLORS = [
 ]
 
 export function ColorPicker({
-  value = "#3B82F6", // Default blue color
+  value = "#3B82F6",
   onChange,
   placeholder = "Select a color",
   className,
   disabled = false,
 }: ColorPickerProps) {
-  // Ensure value is always a valid string color
+  // Ensure value is always a valid color object
   const getValidColor = (colorValue: any) => {
     if (typeof colorValue === 'string' && colorValue.trim() !== '') {
       try {
-        parseColor(colorValue)
-        return colorValue
-      } catch (error) {
-        return "#3B82F6"
+        return parseColor(colorValue)
+      } catch {
+        return parseColor("#3B82F6")
       }
     }
-    return "#3B82F6"
+    return parseColor("#3B82F6")
   }
 
-  const safeValue = getValidColor(value)
-  const [color, setColor] = React.useState(parseColor(safeValue))
+  const [color, setColor] = React.useState(() => getValidColor(value))
 
   React.useEffect(() => {
-    const validColor = getValidColor(value)
-    setColor(parseColor(validColor))
+    setColor(getValidColor(value))
   }, [value])
 
-  const handleColorChange = (newColor: any) => {
-    setColor(newColor)
-    onChange?.(newColor.toString("hex"))
+  const handleColorChange = (details: any) => {
+    setColor(details.value)
+    try {
+      const hexValue = details.value.toString("hex")
+      onChange?.(hexValue)
+    } catch {
+      onChange?.("#3B82F6")
+    }
   }
 
   const handlePresetColorClick = (presetColor: string) => {
@@ -83,49 +85,80 @@ export function ColorPicker({
         onValueChange={handleColorChange}
         disabled={disabled}
       >
-        <div className="flex items-center gap-2">
-          <ColorPickerPrimitive.Control className="flex-1">
-            <input
-              type="text"
-              value={color.toString("hex")}
-              onChange={(e) => handleColorChange(parseColor(e.target.value))}
-              placeholder={placeholder}
-              disabled={disabled}
-              className={cn(
-                "w-full px-3 py-2 text-sm border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                disabled && "cursor-not-allowed opacity-50"
-              )}
-            />
-          </ColorPickerPrimitive.Control>
+        <div className="space-y-4">
+          {/* Full color preview */}
           <ColorPickerPrimitive.Trigger asChild>
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="w-10 h-10 p-0 border-2"
+              className="w-full h-16 rounded-md border-2 overflow-hidden cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
               disabled={disabled}
             >
-              <div className="w-full h-full relative overflow-hidden rounded-sm">
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: 'conic-gradient(#808080 0deg 90deg, #ffffff 90deg 180deg, #808080 180deg 270deg, #ffffff 270deg)',
-                    backgroundSize: '8px 8px'
-                  }}
-                />
-                <div
-                  className="absolute inset-0"
-                  style={{ backgroundColor: color.toString("hex") }}
-                />
-              </div>
+              <ColorPickerPrimitive.ValueSwatch className="w-full h-full" />
             </Button>
           </ColorPickerPrimitive.Trigger>
-        </div>
 
-        <Portal>
-          <ColorPickerPrimitive.Positioner>
-            <ColorPickerPrimitive.Content className="z-50 w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2">
-              <div className="space-y-4">
+          {/* Hidden input for value */}
+          <ColorPickerPrimitive.Control className="hidden">
+            <ColorPickerPrimitive.ChannelInput
+              channel="hex"
+              placeholder={placeholder}
+              disabled={disabled}
+            />
+          </ColorPickerPrimitive.Control>
+
+          {/* Color Picker Content */}
+          <Portal>
+            <ColorPickerPrimitive.Positioner>
+              <ColorPickerPrimitive.Content className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-lg space-y-4 z-50 w-80">
+                {/* Color Area */}
+                <ColorPickerPrimitive.Area className="w-full h-36 rounded-md overflow-hidden relative">
+                  <ColorPickerPrimitive.AreaBackground className="w-full h-full" />
+                  <ColorPickerPrimitive.AreaThumb className="absolute w-3 h-3 bg-white border-2 border-black rounded-full shadow-xs -translate-x-1/2 -translate-y-1/2" />
+                </ColorPickerPrimitive.Area>
+
+                {/* Eye Dropper and Sliders */}
+                <div className="flex items-center gap-3">
+                  <ColorPickerPrimitive.EyeDropperTrigger className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </ColorPickerPrimitive.EyeDropperTrigger>
+
+                  <div className="flex-1 space-y-2">
+                    {/* Hue Slider */}
+                    <ColorPickerPrimitive.ChannelSlider
+                      channel="hue"
+                      className="relative w-full h-3 rounded-full overflow-hidden"
+                    >
+                      <ColorPickerPrimitive.ChannelSliderTrack
+                        className="w-full h-full"
+                        style={{
+                          background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
+                        }}
+                      />
+                      <ColorPickerPrimitive.ChannelSliderThumb className="absolute top-1/2 w-3 h-3 bg-white border-2 border-black rounded-full shadow-xs -translate-y-1/2 -translate-x-1/2" />
+                    </ColorPickerPrimitive.ChannelSlider>
+
+                    {/* Alpha Slider */}
+                    <ColorPickerPrimitive.ChannelSlider
+                      channel="alpha"
+                      className="relative w-full h-3 rounded-full overflow-hidden"
+                    >
+                      <ColorPickerPrimitive.TransparencyGrid
+                        className="w-full h-full"
+                        style={{
+                          backgroundImage: 'conic-gradient(#808080 0deg 90deg, #ffffff 90deg 180deg, #808080 180deg 270deg, #ffffff 270deg)',
+                          backgroundSize: '8px 8px'
+                        }}
+                      />
+                      <ColorPickerPrimitive.ChannelSliderTrack className="w-full h-full" />
+                      <ColorPickerPrimitive.ChannelSliderThumb className="absolute top-1/2 w-3 h-3 bg-white border-2 border-black rounded-full shadow-xs -translate-y-1/2 -translate-x-1/2" />
+                    </ColorPickerPrimitive.ChannelSlider>
+                  </div>
+                </div>
+
                 {/* Preset Colors */}
                 <div>
                   <h4 className="text-sm font-medium mb-2">Preset Colors</h4>
@@ -147,62 +180,21 @@ export function ColorPicker({
                   </div>
                 </div>
 
-                {/* Color Area */}
-                <ColorPickerPrimitive.Area className="relative w-full h-36 rounded-md overflow-hidden">
-                  <ColorPickerPrimitive.AreaBackground className="w-full h-full" />
-                  <ColorPickerPrimitive.AreaThumb className="absolute w-4 h-4 bg-white border-2 border-black rounded-full shadow-sm -translate-x-1/2 -translate-y-1/2" />
-                </ColorPickerPrimitive.Area>
-
-                {/* Hue and Alpha Sliders */}
-                <div className="space-y-2">
-                  {/* Hue Slider */}
-                  <ColorPickerPrimitive.ChannelSlider
-                    channel="hue"
-                    className="relative w-full h-3 rounded-full overflow-hidden"
-                  >
-                    <ColorPickerPrimitive.ChannelSliderTrack
-                      className="w-full h-full rounded-full"
-                      style={{
-                        background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)'
-                      }}
-                    />
-                    <ColorPickerPrimitive.ChannelSliderThumb className="absolute w-4 h-4 bg-white border-2 border-black rounded-full shadow-sm -translate-y-1/2 -translate-x-1/2" />
-                  </ColorPickerPrimitive.ChannelSlider>
-
-                  {/* Alpha Slider */}
-                  <ColorPickerPrimitive.ChannelSlider
-                    channel="alpha"
-                    className="relative w-full h-3 rounded-full overflow-hidden"
-                  >
-                    <div className="absolute inset-0 rounded-full"
-                      style={{
-                        backgroundImage: 'conic-gradient(#808080 0deg 90deg, #ffffff 90deg 180deg, #808080 180deg 270deg, #ffffff 270deg)',
-                        backgroundSize: '8px 8px'
-                      }}
-                    />
-                    <ColorPickerPrimitive.ChannelSliderTrack
-                      className="w-full h-full rounded-full"
-                      style={{ backgroundColor: color.toString("hex") }}
-                    />
-                    <ColorPickerPrimitive.ChannelSliderThumb className="absolute w-4 h-4 bg-white border-2 border-black rounded-full shadow-sm -translate-y-1/2 -translate-x-1/2" />
-                  </ColorPickerPrimitive.ChannelSlider>
-                </div>
-
                 {/* Input Fields */}
                 <div className="flex gap-2">
                   <ColorPickerPrimitive.ChannelInput
                     channel="hex"
-                    className="flex-1 px-3 py-2 text-sm border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <ColorPickerPrimitive.ChannelInput
                     channel="alpha"
-                    className="w-16 px-3 py-2 text-sm border border-input bg-background ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-              </div>
-            </ColorPickerPrimitive.Content>
-          </ColorPickerPrimitive.Positioner>
-        </Portal>
+              </ColorPickerPrimitive.Content>
+            </ColorPickerPrimitive.Positioner>
+          </Portal>
+        </div>
         <ColorPickerPrimitive.HiddenInput />
       </ColorPickerPrimitive.Root>
     </div>

@@ -134,7 +134,7 @@ async function seed() {
         orderDate: new Date('2024-01-15'),
         targetDeliveryDate: new Date('2024-03-15'),
         actualDeliveryDate: null,
-        status: 'processing' as const,
+        status: 'approve' as const,
         totalAmount: '25000.00',
         notes: 'Spring collection order',
         createdBy: 'pm-user-1',

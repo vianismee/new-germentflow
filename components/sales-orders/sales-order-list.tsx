@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Wrench } from 'lucide-react'
 import {
   Search,
   MoreHorizontal,
@@ -43,7 +44,8 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
-  ShoppingCart
+  ShoppingCart,
+  Settings
 } from 'lucide-react'
 import { getSalesOrders, deleteSalesOrder, searchSalesOrders } from '@/lib/actions/sales-orders'
 import { useToast } from '@/hooks/use-toast'
@@ -398,6 +400,12 @@ export function SalesOrderList() {
                               <Link href={`/sales-orders/${order.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit Order
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href="/work-orders/new">
+                                <Wrench className="mr-2 h-4 w-4" />
+                                Convert to Work Order
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />

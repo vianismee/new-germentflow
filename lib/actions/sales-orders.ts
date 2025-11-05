@@ -274,7 +274,7 @@ export async function searchSalesOrders(query: string, status?: string, customer
     }
 
     if (status && status !== 'all') {
-      whereConditions.push(eq(salesOrders.status, status as 'draft' | 'processing' | 'completed' | 'cancelled'))
+      whereConditions.push(eq(salesOrders.status, status as 'draft' | 'on_review' | 'approve' | 'cancelled'))
     }
 
     if (customerId) {
