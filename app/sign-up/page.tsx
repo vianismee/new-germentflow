@@ -14,6 +14,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/lib/auth-client";
+import { signUpAndAutoConfirm } from "@/lib/actions/auth";
+import { AUTH_CONFIG } from "@/lib/auth-config";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 const signUpSchema = z.object({
@@ -58,10 +60,10 @@ export default function SignUpPage() {
         setError("");
 
         try {
-            const result = await signUp(data.email, data.password, data.name, data.role);
+            const result = await signUpAndAutoConfirm(data.email, data.password, data.name, data.role);
 
-            if (result.error) {
-                setError(result.error.message || "Sign up failed");
+            if (!result.success) {
+                setError(result.error || "Sign up failed");
             } else {
                 router.push("/dashboard");
             }
@@ -79,6 +81,12 @@ export default function SignUpPage() {
                     <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
                     <CardDescription>
                         Enter your details to create a new account
+                        {AUTH_CONFIG.AUTO_CONFIRM_SIGNUP && (
+                            <>
+                                <br />
+                                <span className="text-green-600 font-medium">✓ No email confirmation required</span>
+                            </>
+                        )}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -29,8 +29,8 @@ import {
 } from 'lucide-react'
 import { getCustomerOrdersWithItems } from '@/lib/actions/customers'
 import { useToast } from '@/hooks/use-toast'
-import { OrderDetailModal } from './order-detail-modal'
 import { format } from 'date-fns'
+import Link from 'next/link'
 
 interface SalesOrder {
   id: string
@@ -76,8 +76,6 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set())
-  const [detailModalOpen, setDetailModalOpen] = useState(false)
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchOrders()
@@ -452,18 +450,16 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
 
                           {/* Order Actions */}
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 pt-4 border-t">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedOrderId(order.id)
-                                setDetailModalOpen(true)
-                              }}
-                              className="w-full sm:w-auto"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Button>
+                            <Link href={`/customers/${customerId}/${order.id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full sm:w-auto"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </Button>
+                            </Link>
                             <Button variant="outline" size="sm" className="w-full sm:w-auto">
                               <Archive className="h-4 w-4 mr-2" />
                               Download Invoice
@@ -479,16 +475,6 @@ export function OrderHistory({ customerId, customerName }: OrderHistoryProps) {
           )}
         </CardContent>
       </Card>
-
-      {/* Order Detail Modal */}
-      {selectedOrderId && (
-        <OrderDetailModal
-          open={detailModalOpen}
-          onOpenChange={setDetailModalOpen}
-          customerId={customerId}
-          orderId={selectedOrderId}
-        />
-      )}
     </div>
   )
 }

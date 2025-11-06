@@ -316,24 +316,40 @@ export async function getCustomerOrderWithDetails(customerId: string, orderId: s
       .from(salesOrderItems)
       .where(eq(salesOrderItems.salesOrderId, orderId))
 
-    // Get work orders for each item
-    const workOrderData = await db
-      .select({
-        workOrder: workOrders,
-        stageHistory: productionStageHistory,
-        qualityInspection: qualityInspections
-      })
+    // Get work orders for this sales order
+    const workOrdersForOrder = await db
+      .select()
       .from(workOrders)
-      .leftJoin(productionStageHistory, eq(workOrders.id, productionStageHistory.workOrderId))
-      .leftJoin(qualityInspections, eq(workOrders.id, qualityInspections.workOrderId))
       .where(eq(workOrders.salesOrderId, orderId))
+
+    // Get production stage history for each work order
+    const workOrdersWithHistory = await Promise.all(
+      workOrdersForOrder.map(async (workOrder) => {
+        const stageHistory = await db
+          .select()
+          .from(productionStageHistory)
+          .where(eq(productionStageHistory.workOrderId, workOrder.id))
+          .orderBy(productionStageHistory.startedAt)
+
+        const qualityInspectionData = await db
+          .select()
+          .from(qualityInspections)
+          .where(eq(qualityInspections.workOrderId, workOrder.id))
+
+        return {
+          workOrder,
+          stageHistory,
+          qualityInspection: qualityInspectionData
+        }
+      })
+    )
 
     return {
       success: true,
       data: {
         order: order[0],
         items,
-        workOrders: workOrderData
+        workOrders: workOrdersWithHistory
       }
     }
   } catch (error) {
@@ -344,7 +360,7 @@ export async function getCustomerOrderWithDetails(customerId: string, orderId: s
 
 export async function getCustomerOrdersWithItems(customerId: string, limit = 20) {
   try {
-    const { salesOrders, salesOrderItems } = await import('@/db/schema')
+    const { salesOrders, salesOrderItems, workOrders } = await import('@/db/schema')
 
     const orders = await db
       .select()
@@ -353,24 +369,31 @@ export async function getCustomerOrdersWithItems(customerId: string, limit = 20)
       .orderBy(desc(salesOrders.orderDate))
       .limit(limit)
 
-    // Get items for each order
-    const ordersWithItems = await Promise.all(
+    // Get items and work orders for each order
+    const ordersWithItemsAndWorkOrders = await Promise.all(
       orders.map(async (order) => {
         const items = await db
           .select()
           .from(salesOrderItems)
           .where(eq(salesOrderItems.salesOrderId, order.id))
 
+        // Get work orders for this sales order
+        const workOrdersForOrder = await db
+          .select()
+          .from(workOrders)
+          .where(eq(workOrders.salesOrderId, order.id))
+
         return {
           ...order,
-          items
+          items,
+          workOrders: workOrdersForOrder
         }
       })
     )
 
     return {
       success: true,
-      data: ordersWithItems
+      data: ordersWithItemsAndWorkOrders
     }
   } catch (error) {
     console.error('Error fetching customer orders with items:', error)

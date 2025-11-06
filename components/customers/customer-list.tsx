@@ -87,6 +87,7 @@ export function CustomerList() {
     fetchCustomers()
   }, [searchQuery, statusFilter])
 
+  
   const handleDelete = async (id: string, name: string) => {
     // First check if customer has related orders
     const orderCountResult = await getCustomerOrderCount(id)

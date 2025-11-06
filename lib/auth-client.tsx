@@ -134,11 +134,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         data: {
           full_name: name,
-        }
+        },
+        // Disable email confirmation for auto-confirmation
+        emailRedirectTo: undefined
       }
     })
 
     if (!error && data.user) {
+      // Auto-confirm the user by signing them in immediately
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
       await supabase.from('user_roles').insert({
         id: crypto.randomUUID(),
         user_id: data.user.id,

@@ -35,8 +35,8 @@ import {
   Trash2
 } from 'lucide-react'
 import { deleteWorkOrder } from '@/lib/actions/work-orders'
+import { getWorkOrders } from '@/lib/actions/work-orders'
 import { useToast } from '@/hooks/use-toast'
-import { useRealtimeWorkOrdersList } from '@/hooks/use-realtime-work-orders-list'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { StageProgress } from './stage-progress'
@@ -74,13 +74,41 @@ interface WorkOrder {
 export function WorkOrderList() {
   const { toast } = useToast()
 
-  // Use realtime hook for work orders
-  const { workOrders, loading, isConnected } = useRealtimeWorkOrdersList()
-
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('all')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null)
+
+  // Fetch work orders
+  const fetchWorkOrders = async () => {
+    setLoading(true)
+    try {
+      const result = await getWorkOrders()
+      if (result.success && result.data) {
+        setWorkOrders(result.data)
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to fetch work orders',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch work orders',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchWorkOrders()
+  }, [])
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -110,7 +138,8 @@ export function WorkOrderList() {
           title: 'Success',
           description: result.message,
         })
-        // Real-time updates will handle the refresh automatically
+        // Refresh the work orders list
+        await fetchWorkOrders()
       } else {
         toast({
           title: 'Error',
@@ -238,15 +267,7 @@ export function WorkOrderList() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <CardTitle>Work Orders ({filteredWorkOrders.length})</CardTitle>
-                {isConnected && (
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600 font-medium">Live</span>
-                  </div>
-                )}
-              </div>
+              <CardTitle>Work Orders ({filteredWorkOrders.length})</CardTitle>
               <CardDescription>
                 Track work orders through the 8-stage production workflow.
               </CardDescription>

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { useRealtimeWorkOrder } from '@/hooks/use-realtime-work-order'
+import { getWorkOrderById } from '@/lib/actions/work-orders'
 import {
   ArrowLeft,
   Package,
@@ -65,16 +65,25 @@ interface WorkOrderDetailProps {
 export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetailProps) {
   const { toast } = useToast()
 
-  // Use realtime hook for work order data
-  const { workOrder } = useRealtimeWorkOrder({
-    workOrderId: initialWorkOrder.id,
-    initialData: initialWorkOrder
-  })
-
+  const [workOrder, setWorkOrder] = useState(initialWorkOrder)
   const [stageNotes, setStageNotes] = useState('')
   const [loading, setLoading] = useState(false)
 
-  
+  // Fetch work order data
+  const fetchWorkOrder = async () => {
+    if (!initialWorkOrder) return
+
+    try {
+      const result = await getWorkOrderById(initialWorkOrder.id)
+      if (result.success && result.data) {
+        setWorkOrder(result.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch work order:', error)
+    }
+  }
+
+
   const handleStageUpdate = async (newStage: string) => {
     if (!workOrder) return
 
@@ -89,7 +98,8 @@ export function WorkOrderDetail({ workOrder: initialWorkOrder }: WorkOrderDetail
           description: result.message,
         })
         setStageNotes('')
-        // Real-time updates will refresh the data automatically
+        // Refresh the work order data
+        await fetchWorkOrder()
       } else {
         toast({
           title: 'Error',
