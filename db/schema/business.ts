@@ -24,6 +24,14 @@ export const productionStageEnum = pgEnum("production_stage", [
   "delivered"
 ]);
 export const qualityStatusEnum = pgEnum("quality_status", ["pending", "pass", "repair", "reject"]);
+export const sampleRequestStatusEnum = pgEnum("sample_request_status", ["draft", "on_review", "approved", "revision", "canceled"]);
+export const processStageEnum = pgEnum("process_stage", [
+  "embroidery",
+  "dtf_printing",
+  "jersey_printing",
+  "sublimation",
+  "dtf_sublimation"
+]);
 
 // Customers table
 export const customers = pgTable("customers", {
@@ -148,4 +156,51 @@ export const userRoles = pgTable("user_roles", {
   assignedAt: timestamp("assigned_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Sample Requests table
+export const sampleRequests = pgTable("sample_requests", {
+  id: text("id").primaryKey(),
+  sampleId: varchar("sample_id", { length: 50 }).notNull().unique(),
+  customerId: text("customer_id").notNull().references(() => customers.id, { onDelete: "restrict" }),
+  sampleName: text("sample_name").notNull(),
+  color: text("color"),
+  status: sampleRequestStatusEnum("status").default("draft").notNull(),
+  totalOrderQuantity: integer("total_order_quantity"),
+  notes: text("notes"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Sample Material Requirements table
+export const sampleMaterialRequirements = pgTable("sample_material_requirements", {
+  id: text("id").primaryKey(),
+  sampleRequestId: text("sample_request_id").notNull().references(() => sampleRequests.id, { onDelete: "cascade" }),
+  materialType: text("material_type").notNull(),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
+  unit: text("unit").notNull(), // e.g., meters, kilograms, yards
+  specifications: text("specifications"), // Additional material specifications
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Sample Process Stages table (junction table for many-to-many relationship)
+export const sampleProcessStages = pgTable("sample_process_stages", {
+  id: text("id").primaryKey(),
+  sampleRequestId: text("sample_request_id").notNull().references(() => sampleRequests.id, { onDelete: "cascade" }),
+  processStage: processStageEnum("process_stage").notNull(),
+  sequence: integer("sequence").notNull(), // Order in which the process should be executed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Sample Status History table
+export const sampleStatusHistory = pgTable("sample_status_history", {
+  id: text("id").primaryKey(),
+  sampleRequestId: text("sample_request_id").notNull().references(() => sampleRequests.id, { onDelete: "cascade" }),
+  previousStatus: sampleRequestStatusEnum("previous_status"),
+  newStatus: sampleRequestStatusEnum("new_status").notNull(),
+  changedBy: text("changed_by").notNull(),
+  changeReason: text("change_reason"),
+  changedAt: timestamp("changed_at").defaultNow().notNull(),
 });

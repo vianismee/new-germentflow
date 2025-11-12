@@ -12,6 +12,7 @@ import {
   IconSettings,
   IconTool,
   IconUsers,
+  IconFlask,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -33,6 +34,11 @@ const staticData = {
       title: "Dashboard",
       url: "/dashboard",
       icon: IconDashboard,
+    },
+    {
+      title: "R&D Dashboard",
+      url: "/rd-dashboard",
+      icon: IconFlask,
     },
     {
       title: "Customers",

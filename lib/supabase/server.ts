@@ -1,5 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+// import { cookies } from 'next/headers'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -20,7 +20,7 @@ export function createClient() {
     } as any
   }
 
-  const cookieStore = cookies()
+  // const cookieStore = cookies()
 
   return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
     auth: {
